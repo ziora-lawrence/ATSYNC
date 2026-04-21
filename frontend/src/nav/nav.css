@@ -1,0 +1,31 @@
+.nav-container{
+    background-color: black;
+    width: 100%;
+    height: 100px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-container h1{
+    color: white;
+    margin-left: 40px;
+    font-size: 26px;
+}
+
+.nav-menu{
+    color: rgba(255, 255, 255, 0.47);
+    list-style: none;
+    display: flex;
+    gap: 50px;
+    margin-right: 150px;
+}
+
+.get-started{
+    background-color: transparent;
+    color: white;
+    border: none;
+    margin-right: 60px;
+    font-size: 15px;
+    color: rgba(127, 255, 189, 0.327);
+}
