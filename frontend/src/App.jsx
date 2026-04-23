@@ -1,10 +1,13 @@
 import React from 'react'
-import Nav from './nav/nav'
+import {Routes, Route} from 'react-router-dom'
+import Landingpage from './pages/landingpage'
 
 const App = () => {
   return (
     <>
-    <Nav/>
+      <Routes>
+        <Route path='/' element={<Landingpage/>}/>
+      </Routes>
     </>
   )
 }

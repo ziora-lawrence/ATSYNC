@@ -1,0 +1,56 @@
+.nav-container{
+    background-color: black;
+    width: 100%;
+    height: 100px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 0 40px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+}
+
+.atsync-title {
+    text-decoration: none;
+}
+
+.atsync-title h1 {
+    color: white;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.atsync-title:hover h1 {
+    color: #00e5ff;
+    text-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+}
+
+.nav-menu{
+    color: rgba(255, 255, 255, 0.47);
+    list-style: none;
+    display: flex;
+    gap: 50px;
+}
+.nav-menu a{
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.47)
+}
+
+.nav-menu a:hover{
+    color: rgba(0, 229, 255, 0.9);
+    text-decoration: underline;
+    text-underline-offset: 10px;
+    transition: all ease-in 0.3s;
+}
+
+.get-started{
+    background-color: transparent;
+    border: none;
+    font-size: 15px;
+    color: rgb(0, 229, 255);
+}
