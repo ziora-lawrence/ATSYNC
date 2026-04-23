@@ -1,20 +1,18 @@
 import React from 'react'
 import './nav.css'
-import { Link } from 'react-router-dom'
 
-const Nav = () => {
+const Nav = ({ setShowLogin }) => {
   return (
     <div>
         <div className='nav-container'>
-            <Link to={"./"}><h1>ATSYNC</h1></Link>
+            <a href='#hero-section' className='atsync-title'><h1>ATSYNC</h1></a>
             <ul className='nav-menu'>
-                <Link to={"/features"}><li>Features</li></Link>
-                <li>Case Studies</li>
-                <li>Pricing</li>
-                <li>Login</li>
+                <li><a href='#how-it-works'>How It Works</a></li>
+                <li><a href='#pricing'>Pricing</a></li>
+                <li className='login-btn' onClick={() => setShowLogin(true)}>Login</li>
             </ul>
             <button className='get-started'>
-                Get Early Access    
+                Join Waitlist    
             </button>
         </div>
     </div>
