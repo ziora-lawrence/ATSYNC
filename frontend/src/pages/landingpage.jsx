@@ -5,11 +5,56 @@ import Nav from '../nav/nav'
 const Landingpage = () => {
     const [showLogin, setShowLogin] = useState(false)
     const [isLogin, setIsLogin] = useState(true)
+    const [showWaitlist, setShowWaitlist] = useState(false)
+    const [agencyName, setagencyName] = useState("")
+    const [agencyEmail, setagencyEmail] = useState("")
+    const [agencyPass, setagencyPass] = useState("")
+    const [agencyConPass, setagencyConPass] = useState("")
+    const [error, seterror] = useState("")
+
+    const handleSubmit = () => {
+      if (!isLogin) {
+        if (!agencyName.trim()) return seterror("Agency name cannot be empty");
+        if (!agencyEmail.trim()) return seterror("Email cannot be empty");
+        if (!agencyPass.trim()) return seterror("Password cannot be empty");
+        if (!agencyConPass.trim()) return seterror("Confirm Password cannot be empty");
+        if (agencyPass !== agencyConPass) return seterror("Passwords must match");
+        
+        const userData = {
+            agencyName: agencyName.trim(),
+            email: agencyEmail.trim(),
+            password: agencyPass.trim()
+        };
+        localStorage.setItem('atsync_user', JSON.stringify(userData));
+        seterror("");
+        alert("Account created successfully! You can now log in.");
+        setIsLogin(true);
+        setagencyPass("");
+        setagencyConPass("");
+      } else {
+        if (!agencyEmail.trim()) return seterror("Email cannot be empty");
+        if (!agencyPass.trim()) return seterror("Password cannot be empty");
+
+        const storedUserJSON = localStorage.getItem('atsync_user');
+        if (storedUserJSON) {
+            const storedUser = JSON.parse(storedUserJSON);
+            if (storedUser.email === agencyEmail.trim() && storedUser.password === agencyPass.trim()) {
+                seterror("");
+                alert(`Welcome back, ${storedUser.agencyName}!`);
+                setShowLogin(false);
+            } else {
+                seterror("Invalid email or password");
+            }
+        } else {
+            seterror("No account found. Please create an account.");
+        }
+      }
+    };
 
   return (
     <div className='landing-page'>
 
-      <Nav setShowLogin={setShowLogin} />
+      <Nav setShowLogin={setShowLogin} setShowWaitlist={setShowWaitlist} />
 
       {showLogin && (
         <div className='modal-overlay' onClick={() => setShowLogin(false)}>
@@ -23,15 +68,17 @@ const Landingpage = () => {
             </p>
 
             {!isLogin && (
-              <input type='text' placeholder='Agency Name' className='modal-input' />
+              <input value={agencyName} onChange={(e) => setagencyName(e.target.value)} type='text' placeholder='Agency Name' className='modal-input' />
             )}
-            <input type='email' placeholder='Email' className='modal-input' />
-            <input type='password' placeholder='Password' className='modal-input' />
+            <input value={agencyEmail} onChange={(e) => setagencyEmail(e.target.value)} type='email' placeholder='Email' className='modal-input' />
+            <input value={agencyPass} onChange={(e) => setagencyPass(e.target.value)} type='password' placeholder='Password' className='modal-input' />
             {!isLogin && (
-              <input type='password' placeholder='Confirm Password' className='modal-input' />
+              <input value={agencyConPass} onChange={(e) => setagencyConPass(e.target.value)} type='password' placeholder='Confirm Password' className='modal-input' />
             )}
 
-            <button className='modal-submit'>
+            {error && <p className="error-message" style={{color: 'red', fontSize: '14px', marginBottom: '10px'}}>{error}</p>}
+
+            <button className='modal-submit' onClick={handleSubmit}>
               {isLogin ? 'Login' : 'Create Account'}
             </button>
 
@@ -41,6 +88,27 @@ const Landingpage = () => {
                 {isLogin ? 'Sign up' : 'Login'}
               </span>
             </p>
+
+          </div>
+        </div>
+      )}
+
+      {showWaitlist && (
+        <div className='modal-overlay' onClick={() => setShowWaitlist(false)}>
+          <div className='modal-box' onClick={(e) => e.stopPropagation()}>
+            
+            <button className='modal-close' onClick={() => setShowWaitlist(false)}>✕</button>
+            
+            <h2>Join the Waitlist</h2>
+            <p className='modal-subtitle'>
+              Get early access to ATSYNC before anyone else.
+            </p>
+
+            <input type='email' placeholder='Enter your email address' className='modal-input' />
+
+            <button className='modal-submit'>
+              Join Waitlist
+            </button>
 
           </div>
         </div>
@@ -56,7 +124,7 @@ const Landingpage = () => {
                    ATSYNC gives your agency an AI that onboards clients, sends updates, and handles follow-ups automatically.
                 </p>
                 <div className='hero-buttons'>
-                    <button className='get-early-access'>Join Waitlist</button>
+                    <button className='get-early-access' onClick={() => setShowWaitlist(true)}>Join Waitlist</button>
                     <a href='#how-it-works'><button className='watch-demo'>See How It Works</button></a>
                 </div>
             </div>
@@ -128,7 +196,7 @@ const Landingpage = () => {
                         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Manual Onboarding</li>
                         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 3 Projects/month</li>
                     </ul>
-                    <button className='pricing-btn'>Get Started</button>
+                    <button className='pricing-btn' onClick={() => setShowLogin(true)}>Get Started</button>
                 </div>
 
                 {/* Pro Card */}
@@ -147,7 +215,7 @@ const Landingpage = () => {
                         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Unlimited Projects</li>
                         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Custom Branding</li>
                     </ul>
-                    <button className='pricing-btn'>Start Free Trial</button>
+                    <button className='pricing-btn'>Not Available Yet</button>
                 </div>
 
                 {/* Enterprise Card */}
@@ -164,7 +232,7 @@ const Landingpage = () => {
                         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Dedicated Account Manager</li>
                         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Custom API Integrations</li>
                     </ul>
-                    <button className='pricing-btn'>Contact Sales</button>
+                    <button className='pricing-btn'>Coming Soon</button>
                 </div>
             </div>
         </section>
