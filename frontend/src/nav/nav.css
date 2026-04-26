@@ -15,10 +15,14 @@
 
 .atsync-title {
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .atsync-title h1 {
     color: white;
+    margin: 0;
     font-size: 26px;
     font-weight: 800;
     letter-spacing: 2px;
