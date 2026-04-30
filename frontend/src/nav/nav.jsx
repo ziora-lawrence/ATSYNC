@@ -24,6 +24,7 @@ const Nav = ({ setShowLogin, setShowWaitlist }) => {
             </a>
             <ul className='nav-menu'>
                 <li><a href='#how-it-works'>How It Works</a></li>
+                <li><a href='#faq'>FAQ</a></li>
                 <li><a href='#pricing'>Pricing</a></li>
                 <li className='login-btn' onClick={() => setShowLogin(true)}>Login</li>
             </ul>
