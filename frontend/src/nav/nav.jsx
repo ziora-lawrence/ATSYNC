@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useState } from 'react'
 import './nav.css'
 
 const Nav = ({ setShowLogin, setShowWaitlist }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <div>
         <div className='nav-container'>
@@ -22,15 +24,21 @@ const Nav = ({ setShowLogin, setShowWaitlist }) => {
                 </svg>
                 <h1>ATSYNC</h1>
             </a>
-            <ul className='nav-menu'>
-                <li><a href='#how-it-works'>How It Works</a></li>
-                <li><a href='#faq'>FAQ</a></li>
-                <li><a href='#pricing'>Pricing</a></li>
-                <li className='login-btn' onClick={() => setShowLogin(true)}>Login</li>
-            </ul>
-            <button className='get-started' onClick={() => setShowWaitlist(true)}>
-                Join Waitlist    
-            </button>
+            
+            <div className='nav-right'>
+                <ul className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+                    <li><a href='#how-it-works' onClick={() => setIsMobileMenuOpen(false)}>How It Works</a></li>
+                    <li><a href='#faq' onClick={() => setIsMobileMenuOpen(false)}>FAQ</a></li>
+                    <li><a href='#pricing' onClick={() => setIsMobileMenuOpen(false)}>Pricing</a></li>
+                    <li className='login-btn' onClick={() => { setShowLogin(true); setIsMobileMenuOpen(false); }}>Login</li>
+                </ul>
+                <button className='get-started' onClick={() => setShowWaitlist(true)}>
+                    Join Waitlist    
+                </button>
+                <button className='hamburger-btn' onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                    {isMobileMenuOpen ? '✕' : '☰'}
+                </button>
+            </div>
         </div>
     </div>
   )

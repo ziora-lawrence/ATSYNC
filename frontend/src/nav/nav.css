@@ -56,9 +56,63 @@
     transition: all ease-in 0.3s;
 }
 
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+}
+
 .get-started{
     background-color: transparent;
     border: none;
     font-size: 15px;
     color: rgb(0, 229, 255);
+    cursor: pointer;
+}
+
+.hamburger-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+}
+
+@media (max-width: 768px) {
+    .nav-container {
+        padding: 0 20px;
+    }
+    
+    .nav-right {
+        gap: 20px;
+    }
+
+    .hamburger-btn {
+        display: block;
+    }
+
+    .nav-menu {
+        position: absolute;
+        top: 100px; 
+        left: 0;
+        width: 100%;
+        background-color: rgba(10, 10, 10, 0.95);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        flex-direction: column;
+        align-items: center;
+        gap: 30px;
+        padding: 40px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+        transition: clip-path 0.4s ease-in-out;
+        box-sizing: border-box;
+        margin: 0;
+    }
+
+    .nav-menu.mobile-open {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    }
 }

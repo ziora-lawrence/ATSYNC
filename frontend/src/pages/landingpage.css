@@ -412,7 +412,8 @@ html{
   border: 1px solid rgba(0, 229, 255, 0.15);
   border-radius: 16px;
   padding: 48px 40px;
-  width: 420px;
+  width: 90%;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -853,4 +854,58 @@ html{
 @keyframes blinkCursor {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
+}
+
+/* Levitate Animation */
+@keyframes levitate {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-2px, -6px); }
+    50% { transform: translate(2px, -2px); }
+    75% { transform: translate(-1px, 4px); }
+    100% { transform: translate(0, 0); }
+}
+
+.levitate {
+    animation: levitate 8s ease-in-out infinite;
+}
+
+.delay-1 { animation-delay: 0s; }
+.delay-2 { animation-delay: -2s; }
+.delay-3 { animation-delay: -4s; }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .hero {
+        padding: 160px 20px 80px 20px;
+    }
+    
+    .hero-text h1 {
+        font-size: 36px;
+    }
+
+    .hero-text p {
+        font-size: 16px;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 16px;
+    }
+
+    .get-early-access, .watch-demo {
+        width: 100%;
+    }
+
+    .pricing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pricing-section, .features-section, .faq-section {
+        padding: 60px 10px;
+    }
+    
+    .features-header h2, .pricing-header h2, .faq-header h2 {
+        font-size: 32px;
+    }
 }
