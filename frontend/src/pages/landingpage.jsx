@@ -1,7 +1,81 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import './landingpage.css'
 import Nav from '../nav/nav'
 import { useNavigate } from 'react-router-dom'
+
+const ParticleBackground = () => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+    
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const particles = [];
+    const numParticles = 60;
+    const maxDistance = 150;
+
+    for(let i = 0; i < numParticles; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        radius: Math.random() * 2 + 1
+      });
+    }
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        
+        if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if(p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.6)';
+        ctx.fill();
+
+        for(let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dx = p.x - p2.x;
+          const dy = p.y - p2.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < maxDistance) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(0, 229, 255, ${1 - distance/maxDistance})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      });
+
+      animationFrameId = window.requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} id="particle-canvas" />;
+};
 
 const faqs = [
   { question: "Do my clients need to download anything?", answer: "No, clients do not need to download any app. Bob integrates seamlessly with their existing platforms." },
@@ -24,6 +98,73 @@ const Landingpage = () => {
     const [agencyPass, setagencyPass] = useState("")
     const [agencyConPass, setagencyConPass] = useState("")
     const [error, seterror] = useState("")
+
+    const [stats, setStats] = useState({ agencies: 0, speed: 0, chaos: 0 });
+    const statsRef = useRef(null);
+    const statsAnimated = useRef(false);
+    const [headline, setHeadline] = useState("");
+    const fullHeadline = "Stop Managing Clients On WhatsApp";
+
+    // Intersection Observer for scroll animations
+    useEffect(() => {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1 });
+  
+      const animatedElements = document.querySelectorAll('.animate-on-scroll, .section-divider');
+      animatedElements.forEach(el => observer.observe(el));
+  
+      return () => {
+        animatedElements.forEach(el => observer.unobserve(el));
+      };
+    }, []);
+
+    // Intersection Observer for Stats
+    useEffect(() => {
+      const animateValue = (start, end, duration, callback) => {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+          if (!startTimestamp) startTimestamp = timestamp;
+          const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+          callback(Math.floor(progress * (end - start) + start));
+          if (progress < 1) {
+            window.requestAnimationFrame(step);
+          }
+        };
+        window.requestAnimationFrame(step);
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !statsAnimated.current) {
+          statsAnimated.current = true;
+          animateValue(0, 500, 2000, (val) => setStats(s => ({...s, agencies: val})));
+          animateValue(0, 3, 2000, (val) => setStats(s => ({...s, speed: val})));
+          animateValue(0, 100, 2000, (val) => setStats(s => ({...s, chaos: val})));
+        }
+      }, { threshold: 0.5 });
+  
+      if (statsRef.current) observer.observe(statsRef.current);
+      return () => { if (statsRef.current) observer.unobserve(statsRef.current); }
+    }, []);
+
+    // Typewriter effect
+    useEffect(() => {
+      let i = 0;
+      setHeadline("");
+      const timer = setInterval(() => {
+        if (i < fullHeadline.length) {
+          setHeadline(fullHeadline.slice(0, i + 1));
+          i++;
+        } else {
+          clearInterval(timer);
+        }
+      }, 100);
+      return () => clearInterval(timer);
+    }, []);
 
     const navigate = useNavigate() 
 
@@ -69,7 +210,7 @@ const Landingpage = () => {
 
   return (
     <div className='landing-page'>
-
+      <ParticleBackground />
       <Nav setShowLogin={setShowLogin} setShowWaitlist={setShowWaitlist} />
 
       {showLogin && (
@@ -133,8 +274,7 @@ const Landingpage = () => {
         <section className='hero' id='hero-section'>
             <div className='hero-text'>
                 <h1>
-                    Stop Managing Clients<br/>
-                    On Whatsapp
+                    {headline}<span className="typewriter-cursor"></span>
                 </h1>
                 <p>
                    ATSYNC gives your agency an AI that onboards clients, sends updates, and handles follow-ups automatically.
@@ -146,51 +286,51 @@ const Landingpage = () => {
             </div>
         </section>
 
+        <hr className="section-divider animate-on-scroll" />
+        <section className='stats-bar' ref={statsRef}>
+            <div className='stat-item'>
+                <h3>{stats.agencies}+</h3>
+                <p>Agencies on the waitlist</p>
+            </div>
+            <div className='stat-item'>
+                <h3>{stats.speed}x</h3>
+                <p>Faster client onboarding</p>
+            </div>
+            <div className='stat-item'>
+                <h3>{stats.chaos}%</h3>
+                <p>WhatsApp chaos eliminated</p>
+            </div>
+        </section>
+
+        <hr className="section-divider animate-on-scroll" />
         <section className='features-section' id='how-it-works'>
             <div className='features-header'>
-                <span className='subtitle'>INTELLIGENT WORKFLOWS</span>
-                <h2>Focus on creating.<br/>Leave The Rest To BOB.</h2>
+                <span className='subtitle'>HOW IT WORKS</span>
+                <h2>Three simple steps.<br/>Zero WhatsApp chaos.</h2>
             </div>
             
             <div className='features-grid'>
-                <div className='features-top-row'>
-                    <div className='feature-card'>
-                        <div className='feature-icon'>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/><path d="M6 11V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/></svg>
-                        </div>
-                        <h3>AI Client Onboarding</h3>
-                        <p>Automate the paperwork and start projects faster. Dynamic questionnaires adapt to client responses in real-time.</p>
-                    </div>
-                    
-                    <div className='feature-card highlight-card'>
-                        <div className='feature-icon'>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
-                        </div>
-                        <h3>Automated Updates</h3>
-                        <p>Keep clients in the loop without lifting a finger. BOB translates your progress into professional client briefs.</p>
-                    </div>
+                <div className='feature-card animate-on-scroll' style={{ transitionDelay: '0.1s' }}>
+                    <div className='feature-icon' style={{fontSize: '20px', fontWeight: 'bold', color: '#00e5ff'}}>1</div>
+                    <h3>Set up your agency profile</h3>
+                    <p>Tell Bob about your services, pricing, and tone of voice. Setup takes less than 5 minutes.</p>
+                </div>
+                
+                <div className='feature-card highlight-card animate-on-scroll' style={{ transitionDelay: '0.3s' }}>
+                    <div className='feature-icon' style={{fontSize: '20px', fontWeight: 'bold', color: '#00e5ff'}}>2</div>
+                    <h3>Share your client intake link</h3>
+                    <p>Send your unique ATSYNC portal link to new leads instead of chatting on WhatsApp.</p>
                 </div>
 
-                <div className='feature-card wide-card'>
-                    <div className='wide-card-content'>
-                        <div className='feature-icon'>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        </div>
-                        <h3>One Click Approvals</h3>
-                        <p>Get feedback and sign-offs in seconds. Eliminate endless email threads with direct, trackable approval links.</p>
-                    </div>
-                    <div className='wide-card-graphic'>
-                        <div className='mock-ui-window'>
-                            <div className='mock-ui-line short'></div>
-                            <div className='mock-ui-line long'></div>
-                            <div className='mock-ui-line medium'></div>
-                            <div className='mock-ui-link'>Approve Concept</div>
-                        </div>
-                    </div>
+                <div className='feature-card animate-on-scroll' style={{ transitionDelay: '0.5s' }}>
+                    <div className='feature-icon' style={{fontSize: '20px', fontWeight: 'bold', color: '#00e5ff'}}>3</div>
+                    <h3>Bob handles the rest</h3>
+                    <p>Bob collects project briefs, answers questions, and sets up your dashboard automatically.</p>
                 </div>
             </div>
         </section>
 
+        <hr className="section-divider animate-on-scroll" />
         <section className='faq-section' id='faq'>
             <div className='faq-header'>
                 <span className='subtitle'>F A Q</span>
@@ -221,6 +361,7 @@ const Landingpage = () => {
             </div>
         </section>
 
+        <hr className="section-divider animate-on-scroll" />
         <section className='pricing-section' id='pricing'>
             <div className='pricing-header'>
                 <span className='subtitle'>PRICING</span>
@@ -229,7 +370,7 @@ const Landingpage = () => {
             
             <div className='pricing-grid'>
                 {/* Starter Card */}
-                <div className='pricing-card'>
+                <div className='pricing-card animate-on-scroll' style={{ transitionDelay: '0.1s' }}>
                     <div className='pricing-info'>
                         <h3>Starter</h3>
                         <p>For small freelancers.</p>
@@ -246,7 +387,7 @@ const Landingpage = () => {
                 </div>
 
                 {/* Pro Card */}
-                <div className='pricing-card pro'>
+                <div className='pricing-card pro animate-on-scroll' style={{ transitionDelay: '0.3s' }}>
                     <div className='popular-badge'>POPULAR</div>
                     <div className='pricing-info'>
                         <h3>Pro</h3>
@@ -265,7 +406,7 @@ const Landingpage = () => {
                 </div>
 
                 {/* Enterprise Card */}
-                <div className='pricing-card'>
+                <div className='pricing-card animate-on-scroll' style={{ transitionDelay: '0.5s' }}>
                     <div className='pricing-info'>
                         <h3>Enterprise</h3>
                         <p>For large creative studios.</p>
