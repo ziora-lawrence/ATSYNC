@@ -310,22 +310,28 @@ const Landingpage = () => {
             </div>
             
             <div className='features-grid'>
-                <div className='feature-card animate-on-scroll' style={{ transitionDelay: '0.1s' }}>
-                    <div className='feature-icon' style={{fontSize: '20px', fontWeight: 'bold', color: '#00e5ff'}}>1</div>
-                    <h3>Set up your agency profile</h3>
-                    <p>Tell Bob about your services, pricing, and tone of voice. Setup takes less than 5 minutes.</p>
+                <div className='animate-on-scroll' style={{ transitionDelay: '0.1s' }}>
+                    <div className='feature-card levitate delay-1'>
+                        <div className='feature-icon' style={{fontSize: '20px', fontWeight: 'bold', color: '#00e5ff'}}>1</div>
+                        <h3>Set up your agency profile</h3>
+                        <p>Tell Bob about your services, pricing, and tone of voice. Setup takes less than 5 minutes.</p>
+                    </div>
                 </div>
                 
-                <div className='feature-card highlight-card animate-on-scroll' style={{ transitionDelay: '0.3s' }}>
-                    <div className='feature-icon' style={{fontSize: '20px', fontWeight: 'bold', color: '#00e5ff'}}>2</div>
-                    <h3>Share your client intake link</h3>
-                    <p>Send your unique ATSYNC portal link to new leads instead of chatting on WhatsApp.</p>
+                <div className='animate-on-scroll' style={{ transitionDelay: '0.3s' }}>
+                    <div className='feature-card highlight-card levitate delay-2'>
+                        <div className='feature-icon' style={{fontSize: '20px', fontWeight: 'bold', color: '#00e5ff'}}>2</div>
+                        <h3>Share your client intake link</h3>
+                        <p>Send your unique ATSYNC portal link to new leads instead of chatting on WhatsApp.</p>
+                    </div>
                 </div>
 
-                <div className='feature-card animate-on-scroll' style={{ transitionDelay: '0.5s' }}>
-                    <div className='feature-icon' style={{fontSize: '20px', fontWeight: 'bold', color: '#00e5ff'}}>3</div>
-                    <h3>Bob handles the rest</h3>
-                    <p>Bob collects project briefs, answers questions, and sets up your dashboard automatically.</p>
+                <div className='animate-on-scroll' style={{ transitionDelay: '0.5s' }}>
+                    <div className='feature-card levitate delay-3'>
+                        <div className='feature-icon' style={{fontSize: '20px', fontWeight: 'bold', color: '#00e5ff'}}>3</div>
+                        <h3>Bob handles the rest</h3>
+                        <p>Bob collects project briefs, answers questions, and sets up your dashboard automatically.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -370,56 +376,62 @@ const Landingpage = () => {
             
             <div className='pricing-grid'>
                 {/* Starter Card */}
-                <div className='pricing-card animate-on-scroll' style={{ transitionDelay: '0.1s' }}>
-                    <div className='pricing-info'>
-                        <h3>Starter</h3>
-                        <p>For small freelancers.</p>
+                <div className='animate-on-scroll' style={{ transitionDelay: '0.1s', display: 'flex', height: '100%' }}>
+                    <div className='pricing-card levitate delay-1' style={{ width: '100%' }}>
+                        <div className='pricing-info'>
+                            <h3>Starter</h3>
+                            <p>For small freelancers.</p>
+                        </div>
+                        <div className='pricing-price'>
+                            Free
+                        </div>
+                        <ul className='pricing-features'>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Basic Client CRM</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Manual Onboarding</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 3 Projects/month</li>
+                        </ul>
+                        <button className='pricing-btn' onClick={() => setShowLogin(true)}>Get Started</button>
                     </div>
-                    <div className='pricing-price'>
-                        Free
-                    </div>
-                    <ul className='pricing-features'>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Basic Client CRM</li>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Manual Onboarding</li>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 3 Projects/month</li>
-                    </ul>
-                    <button className='pricing-btn' onClick={() => setShowLogin(true)}>Get Started</button>
                 </div>
 
                 {/* Pro Card */}
-                <div className='pricing-card pro animate-on-scroll' style={{ transitionDelay: '0.3s' }}>
-                    <div className='popular-badge'>POPULAR</div>
-                    <div className='pricing-info'>
-                        <h3>Pro</h3>
-                        <p>For growing agencies.</p>
+                <div className='animate-on-scroll' style={{ transitionDelay: '0.3s', display: 'flex', height: '100%' }}>
+                    <div className='pricing-card pro levitate delay-2' style={{ width: '100%' }}>
+                        <div className='popular-badge'>POPULAR</div>
+                        <div className='pricing-info'>
+                            <h3>Pro</h3>
+                            <p>For growing agencies.</p>
+                        </div>
+                        <div className='pricing-price'>
+                            $29<span>/mo</span>
+                        </div>
+                        <ul className='pricing-features'>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> AI Client Onboarding</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Automated Updates</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Unlimited Projects</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Custom Branding</li>
+                        </ul>
+                        <button className='pricing-btn'>Not Available Yet</button>
                     </div>
-                    <div className='pricing-price'>
-                        $29<span>/mo</span>
-                    </div>
-                    <ul className='pricing-features'>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> AI Client Onboarding</li>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Automated Updates</li>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Unlimited Projects</li>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Custom Branding</li>
-                    </ul>
-                    <button className='pricing-btn'>Not Available Yet</button>
                 </div>
 
                 {/* Enterprise Card */}
-                <div className='pricing-card animate-on-scroll' style={{ transitionDelay: '0.5s' }}>
-                    <div className='pricing-info'>
-                        <h3>Enterprise</h3>
-                        <p>For large creative studios.</p>
+                <div className='animate-on-scroll' style={{ transitionDelay: '0.5s', display: 'flex', height: '100%' }}>
+                    <div className='pricing-card levitate delay-3' style={{ width: '100%' }}>
+                        <div className='pricing-info'>
+                            <h3>Enterprise</h3>
+                            <p>For large creative studios.</p>
+                        </div>
+                        <div className='pricing-price'>
+                            Custom
+                        </div>
+                        <ul className='pricing-features'>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Everything in Pro</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Dedicated Account Manager</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Custom API Integrations</li>
+                        </ul>
+                        <button className='pricing-btn'>Coming Soon</button>
                     </div>
-                    <div className='pricing-price'>
-                        Custom
-                    </div>
-                    <ul className='pricing-features'>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Everything in Pro</li>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Dedicated Account Manager</li>
-                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Custom API Integrations</li>
-                    </ul>
-                    <button className='pricing-btn'>Coming Soon</button>
                 </div>
             </div>
         </section>
