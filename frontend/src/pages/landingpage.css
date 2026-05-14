@@ -459,6 +459,32 @@ html{
 .modal-input:focus { border-color: rgba(0, 229, 255, 0.5); }
 .modal-input::placeholder { color: rgba(255,255,255,0.3); }
 
+.password-input-container {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+
+.password-input-container .modal-input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.eye-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  user-select: none;
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+.eye-icon:hover {
+  opacity: 1;
+}
+
 .modal-submit {
   background: #00e5ff;
   color: #000;
