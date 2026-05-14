@@ -218,7 +218,7 @@ const Landingpage = () => {
 
   const navigate = useNavigate();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isLogin) {
       if (!agencyName.trim()) return seterror("Agency name cannot be empty");
       if (!agencyEmail.trim()) return seterror("Email cannot be empty");
@@ -227,49 +227,59 @@ const Landingpage = () => {
         return seterror("Confirm Password cannot be empty");
       if (agencyPass !== agencyConPass) return seterror("Passwords must match");
 
-      const userData = {
-        agencyName: agencyName.trim(),
-        email: agencyEmail.trim(),
-        password: agencyPass.trim(),
-      };
-      localStorage.setItem("atsync_user", JSON.stringify(userData));
-      seterror("");
-      setIsLogin(true);
-      setagencyPass("");
-      setagencyConPass("");
-      return seterror(
-        "you cannot log in now but your email and pass have been saved for next time",
-      );
+      try {
+        const res = await fetch("https://atsync-backend.vercel.app/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agencyName: agencyName.trim(),
+            email: agencyEmail.trim(),
+            password: agencyPass.trim(),
+          }),
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+          seterror("");
+          setIsLogin(true);
+          setagencyPass("");
+          setagencyConPass("");
+          alert(data.message || "Account created! Please check your email to verify.");
+        } else {
+          seterror(data.message || "Registration failed");
+        }
+      } catch (err) {
+        seterror("Network error. Please try again later.");
+      }
     } else {
       if (!agencyEmail.trim()) return seterror("Email cannot be empty");
       if (!agencyPass.trim()) return seterror("Password cannot be empty");
 
-      /*const storedUserJSON = localStorage.getItem("atsync_user");
-      if (storedUserJSON) {
-        const storedUser = JSON.parse(storedUserJSON);
-        if (
-          storedUser.email === agencyEmail.trim() &&
-          storedUser.password === agencyPass.trim()
-        ) {
+      try {
+        const res = await fetch("https://atsync-backend.vercel.app/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: agencyEmail.trim(),
+            password: agencyPass.trim(),
+          }),
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+          localStorage.setItem("atsync_token", data.token);
+          localStorage.setItem("atsync_user", JSON.stringify({ email: data.email, agencyName: data.agencyName }));
           seterror("");
-          alert(`Welcome back, ${storedUser.agencyName}!`);
           setShowLogin(false);
+          window.scrollTo(0, 0);
+          navigate("/agent-onboard");
         } else {
-          seterror("Invalid email or password");
+          seterror(data.message || "Invalid credentials");
         }
-      } else {
-        seterror("No account found. Please create an account.");
-      }*/
-      if (
-        agencyEmail !== "danieliwuji28@gmail.com" ||
-        agencyPass !== "ziora13*"
-      ) {
-        return seterror("sorry you cannot log in at this time");
-      } else {
-        seterror("");
-        setShowLogin(false);
-        window.scrollTo(0, 0);
-        navigate("/agent-onboard");
+      } catch (err) {
+        seterror("Network error. Please try again later.");
       }
     }
   };
