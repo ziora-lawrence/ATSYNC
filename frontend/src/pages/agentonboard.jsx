@@ -35,7 +35,7 @@ const AgentOnboard = () => {
         if (currentStep < 6) {
             setCurrentStep(prev => prev + 1);
         } else {
-            navigate('/agentdashboard');
+            navigate('/dashboard');
         }
     };
 
