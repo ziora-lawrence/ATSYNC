@@ -935,3 +935,36 @@ html{
         font-size: 32px;
     }
 }
+
+/* Contact Us Modal Glowing Buttons */
+.whatsapp-glow-btn {
+    background-color: #25D366 !important;
+    color: white !important;
+    box-shadow: 0 0 20px rgba(37, 211, 102, 0.4);
+    animation: whatsappPulse 2s infinite alternate;
+}
+
+.whatsapp-glow-btn:hover {
+    box-shadow: 0 0 30px rgba(37, 211, 102, 0.6);
+}
+
+@keyframes whatsappPulse {
+    0% { box-shadow: 0 0 15px rgba(37, 211, 102, 0.3); }
+    100% { box-shadow: 0 0 30px rgba(37, 211, 102, 0.7); }
+}
+
+.email-glow-btn {
+    background-color: #007bff !important;
+    color: white !important;
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.4);
+    animation: emailPulse 2s infinite alternate;
+}
+
+.email-glow-btn:hover {
+    box-shadow: 0 0 30px rgba(0, 123, 255, 0.6);
+}
+
+@keyframes emailPulse {
+    0% { box-shadow: 0 0 15px rgba(0, 123, 255, 0.3); }
+    100% { box-shadow: 0 0 30px rgba(0, 123, 255, 0.7); }
+}
