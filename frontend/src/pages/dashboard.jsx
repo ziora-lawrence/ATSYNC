@@ -21,7 +21,7 @@ const mockChartData = [
 
 const Dashboard = () => {
   const [stats, setStats] = useState(mockStats);
-  const [chartData, setChartData] = useState(mockChartData);
+  const [chartData] = useState(mockChartData);
 
   // Simulate animation of stats on mount
   useEffect(() => {
