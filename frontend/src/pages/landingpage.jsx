@@ -196,16 +196,16 @@ const Landingpage = () => {
       { threshold: 0.5 },
     );
 
-    if (statsRef.current) observer.observe(statsRef.current);
+    const currentRef = statsRef.current;
+    if (currentRef) observer.observe(currentRef);
     return () => {
-      if (statsRef.current) observer.unobserve(statsRef.current);
+      if (currentRef) observer.unobserve(currentRef);
     };
   }, []);
 
   // Typewriter effect
   useEffect(() => {
     let i = 0;
-    setHeadline("");
     const timer = setInterval(() => {
       if (i < fullHeadline.length) {
         setHeadline(fullHeadline.slice(0, i + 1));
