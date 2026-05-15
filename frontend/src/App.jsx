@@ -1,5 +1,6 @@
 import React from 'react'
 import {Routes, Route} from 'react-router-dom'
+import { Analytics } from "@vercel/analytics/react"
 import Landingpage from './pages/landingpage'
 import Agentonboard from './pages/agentonboard'
 import Dashboard from './pages/dashboard'
@@ -12,6 +13,7 @@ const App = () => {
         <Route path='/agent-onboard' element={<Agentonboard/>}/>
         <Route path='/dashboard' element={<Dashboard/>}/>
       </Routes>
+      <Analytics />
     </>
   )
 }
