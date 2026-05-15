@@ -125,6 +125,7 @@ const Landingpage = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [showWaitlist, setShowWaitlist] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [agencyName, setagencyName] = useState("");
   const [agencyEmail, setagencyEmail] = useState("");
   const [agencyPass, setagencyPass] = useState("");
@@ -137,7 +138,7 @@ const Landingpage = () => {
   const statsRef = useRef(null);
   const statsAnimated = useRef(false);
   const [headline, setHeadline] = useState("");
-  const fullHeadline = "Stop Managing Clients On WhatsApp";
+  const fullHeadline = "Focus on Creating Leave the rest to Bob";
 
   // Intersection Observer for scroll animations
   useEffect(() => {
@@ -327,8 +328,8 @@ const Landingpage = () => {
                 placeholder="Password"
                 className="modal-input"
               />
-              <span 
-                className="eye-icon" 
+              <span
+                className="eye-icon"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? "🙈" : "👁️"}
@@ -343,8 +344,8 @@ const Landingpage = () => {
                   placeholder="Confirm Password"
                   className="modal-input"
                 />
-                <span 
-                  className="eye-icon" 
+                <span
+                  className="eye-icon"
                   onClick={() => setShowConPassword(!showConPassword)}
                 >
                   {showConPassword ? "🙈" : "👁️"}
@@ -399,6 +400,37 @@ const Landingpage = () => {
             />
 
             <button className="modal-submit">Join Waitlist</button>
+          </div>
+        </div>
+      )}
+
+      {showContactModal && (
+        <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="modal-close"
+              onClick={() => setShowContactModal(false)}
+            >
+              ✕
+            </button>
+
+            <h2>Contact Us</h2>
+            <p className="modal-subtitle">
+              reach out to us if you have additional questions
+            </p>
+
+            <div className="contact-buttons-container" style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "20px" }}>
+              <a href="https://wa.me/2348085742261" target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                <button className="modal-submit whatsapp-glow-btn">
+                  whatsapp me
+                </button>
+              </a>
+              <a href="mailto:atlassync1@gmail.com" style={{ textDecoration: "none" }}>
+                <button className="modal-submit email-glow-btn">
+                  email
+                </button>
+              </a>
+            </div>
           </div>
         </div>
       )}
@@ -557,7 +589,7 @@ const Landingpage = () => {
         <div className="faq-contact">
           <h3>Still have questions?</h3>
           <p>Talk to us directly. We respond within 24 hours.</p>
-          <button className="contact-btn">Contact Us</button>
+          <button className="contact-btn" onClick={() => setShowContactModal(true)}>Contact Us</button>
         </div>
       </section>
 
