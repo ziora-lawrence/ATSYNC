@@ -24,6 +24,11 @@
     gap: 10px;
 }
 
+.atsync-logo {
+  height: 40px;
+  width: auto;
+}
+
 .atsync-title h1 {
     color: white;
     margin: 0;
@@ -112,7 +117,21 @@
         margin: 0;
     }
 
-    .nav-menu.mobile-open {
-        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-    }
+  .nav-menu.mobile-open {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .atsync-title h1 {
+    font-size: 20px;
+    letter-spacing: 1px;
+  }
+
+  .nav-right {
+    gap: 15px;
+  }
+
+  .get-started {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
 }
