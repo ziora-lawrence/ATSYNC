@@ -133,6 +133,9 @@ const Landingpage = () => {
   const [error, seterror] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConPassword, setShowConPassword] = useState(false);
+  const [wait, setWait] = useState("");
+  const [isWaitlistLoading, setIsWaitlistLoading] = useState(false);
+  const [isWaitlistJoined, setIsWaitlistJoined] = useState(false);
 
   const [stats, setStats] = useState({ agencies: 0, speed: 0, chaos: 0 });
   const statsRef = useRef(null);
@@ -285,6 +288,49 @@ const Landingpage = () => {
     }
   };
 
+  //email waitlist 
+  const handleWaitlistSubmit = async (e) => {
+    e.preventDefault();
+    if (!wait.trim()) return seterror("Email cannot be empty");
+    
+    // Basic email regex validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(wait)) return seterror("Please enter a valid email address");
+
+    setIsWaitlistLoading(true);
+    seterror("");
+
+    try {
+      const response = await fetch("https://sheetdb.io/api/v1/y0cinjma5dfxv", {
+        method: "POST",
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          data: [
+            {
+              EMAIL: wait,
+              STATUS: "waiting",
+              DATE: new Date().toISOString()
+            }
+          ]
+        })
+      });
+      if (response.ok) {
+        setIsWaitlistJoined(true);
+        setWait("");
+      } else {
+        seterror("Something went wrong. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      seterror("Network error. Please check your connection.");
+    } finally {
+      setIsWaitlistLoading(false);
+    }
+  }
+
   return (
     <div className="landing-page">
       <ParticleBackground />
@@ -379,27 +425,57 @@ const Landingpage = () => {
       )}
 
       {showWaitlist && (
-        <div className="modal-overlay" onClick={() => setShowWaitlist(false)}>
+        <div className="modal-overlay" onClick={() => { setShowWaitlist(false); setIsWaitlistJoined(false); }}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <button
               className="modal-close"
-              onClick={() => setShowWaitlist(false)}
+              onClick={() => { setShowWaitlist(false); setIsWaitlistJoined(false); }}
             >
               ✕
             </button>
 
-            <h2>Join the Waitlist</h2>
-            <p className="modal-subtitle">
-              Get early access to ATSYNC before anyone else.
-            </p>
+            {isWaitlistJoined ? (
+              <div className="waitlist-success" style={{ textAlign: "center", padding: "20px 0" }}>
+                <div className="success-icon" style={{ fontSize: "50px", marginBottom: "20px" }}>✨</div>
+                <h2>Thanks for joining!</h2>
+                <p className="modal-subtitle">We'll notify you as soon as ATSYNC is ready for you.</p>
+                <button className="modal-submit" onClick={() => { setShowWaitlist(false); setIsWaitlistJoined(false); }} style={{ marginTop: "20px" }}>
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2>Join the Waitlist</h2>
+                <p className="modal-subtitle">
+                  Get early access to ATSYNC before anyone else.
+                </p>
 
-            <input
-              type="email"
-              placeholder="Enter your email address"
-              className="modal-input"
-            />
+                <input
+                  type="email"
+                  placeholder="Enter your email address"
+                  className="modal-input"
+                  value={wait}
+                  onChange={(e) => setWait(e.target.value)}
+                />
 
-            <button className="modal-submit">Join Waitlist</button>
+                {error && (
+                  <p
+                    className="error-message"
+                    style={{ color: "red", fontSize: "14px", marginBottom: "10px" }}
+                  >
+                    {error}
+                  </p>
+                )}
+
+                <button 
+                  className="modal-submit" 
+                  onClick={handleWaitlistSubmit}
+                  disabled={isWaitlistLoading}
+                >
+                  {isWaitlistLoading ? "Joining..." : "Join Waitlist"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
