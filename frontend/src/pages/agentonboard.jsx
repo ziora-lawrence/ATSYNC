@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './agentonboard.css';
+import { supabase } from '../lib/supabase';
 
 const AgentOnboard = () => {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedServices, setSelectedServices] = useState(['Web Design', 'Social Media']);
     const [selectedTone, setSelectedTone] = useState('Formal');
+    const [submitError, setSubmitError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
     const [formData, setFormData] = useState({
         agencyName: '',
@@ -31,11 +34,53 @@ const AgentOnboard = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (currentStep < 6) {
             setCurrentStep(prev => prev + 1);
         } else {
-            navigate('/dashboard');
+            // ── Submit to Supabase ──
+            setIsSubmitting(true);
+            setSubmitError('');
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                const payload = {
+                    agency_name: formData.agencyName,
+                    city_country: formData.cityCountry,
+                    description: formData.description,
+                    team_size: formData.teamSize,
+                    years_operating: formData.yearsOperating,
+                    services: selectedServices,
+                    popular_service: formData.popularService,
+                    not_offered_services: formData.notOfferedServices,
+                    min_budget: formData.minBudget,
+                    deposit_required: formData.depositRequired,
+                    turnaround_time: formData.turnaroundTime,
+                    max_projects: formData.maxProjects,
+                    response_time: formData.responseTime,
+                    process: formData.process,
+                    tone: selectedTone,
+                    never_say: formData.neverSay,
+                    delay_reasons: formData.delayReasons,
+                };
+
+                if (user) {
+                    payload.user_id = user.id;
+                    const { error } = await supabase
+                        .from('agent_profiles')
+                        .upsert(payload, { onConflict: 'user_id' });
+                    if (error) throw error;
+                } else {
+                    // Not logged in — save without user_id (guest preview)
+                    await supabase.from('agent_profiles').insert([payload]);
+                }
+
+                navigate('/dashboard');
+            } catch (err) {
+                console.error(err);
+                setSubmitError('Failed to save profile. Please try again.');
+            } finally {
+                setIsSubmitting(false);
+            }
         }
     };
 
@@ -320,9 +365,16 @@ const AgentOnboard = () => {
 
             {/* Footer */}
             <footer className="onboard-footer">
-                <button className="btn-back" onClick={handleBack}>Back</button>
-                <span className="auto-save">Progress auto-saved</span>
-                <button className="btn-continue" onClick={handleNext}>{currentStep === 6 ? 'Submit' : 'Continue'}</button>
+                <button className="btn-back" onClick={handleBack} disabled={isSubmitting}>Back</button>
+                <span className="auto-save">
+                    {submitError
+                        ? <span style={{ color: '#ff4d4f' }}>{submitError}</span>
+                        : 'Progress auto-saved'
+                    }
+                </span>
+                <button className="btn-continue" onClick={handleNext} disabled={isSubmitting}>
+                    {currentStep === 6 ? (isSubmitting ? 'Saving...' : 'Submit') : 'Continue'}
+                </button>
             </footer>
         </div>
     );

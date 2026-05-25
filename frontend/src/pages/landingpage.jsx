@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "./landingpage.css";
 import Nav from "../nav/nav";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 const ParticleBackground = () => {
   const canvasRef = useRef(null);
@@ -224,15 +225,15 @@ const Landingpage = () => {
 
   const handleSubmit = async () => {
     if (!isLogin) {
+      // ── SIGN UP via Render Backend ──
       if (!agencyName.trim()) return seterror("Agency name cannot be empty");
       if (!agencyEmail.trim()) return seterror("Email cannot be empty");
       if (!agencyPass.trim()) return seterror("Password cannot be empty");
-      if (!agencyConPass.trim())
-        return seterror("Confirm Password cannot be empty");
+      if (!agencyConPass.trim()) return seterror("Confirm Password cannot be empty");
       if (agencyPass !== agencyConPass) return seterror("Passwords must match");
 
       try {
-        const res = await fetch("https://atsync-backend.vercel.app/api/auth/register", {
+        const res = await fetch("https://atsync-backend-vdko.onrender.com/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -241,9 +242,9 @@ const Landingpage = () => {
             password: agencyPass.trim(),
           }),
         });
-        
+
         const data = await res.json();
-        
+
         if (res.ok) {
           seterror("");
           setIsLogin(true);
@@ -257,11 +258,12 @@ const Landingpage = () => {
         seterror("Network error. Please try again later.");
       }
     } else {
+      // ── SIGN IN via Render Backend ──
       if (!agencyEmail.trim()) return seterror("Email cannot be empty");
       if (!agencyPass.trim()) return seterror("Password cannot be empty");
 
       try {
-        const res = await fetch("https://atsync-backend.vercel.app/api/auth/login", {
+        const res = await fetch("https://atsync-backend-vdko.onrender.com/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -269,12 +271,15 @@ const Landingpage = () => {
             password: agencyPass.trim(),
           }),
         });
-        
+
         const data = await res.json();
-        
+
         if (res.ok) {
           localStorage.setItem("atsync_token", data.token);
-          localStorage.setItem("atsync_user", JSON.stringify({ email: data.email, agencyName: data.agencyName }));
+          localStorage.setItem("atsync_user", JSON.stringify({
+            email: data.email,
+            agencyName: data.agencyName,
+          }));
           seterror("");
           setShowLogin(false);
           window.scrollTo(0, 0);
@@ -288,12 +293,11 @@ const Landingpage = () => {
     }
   };
 
-  //email waitlist 
+  // ── Waitlist via Supabase ──
   const handleWaitlistSubmit = async (e) => {
     e.preventDefault();
     if (!wait.trim()) return seterror("Email cannot be empty");
-    
-    // Basic email regex validation
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(wait)) return seterror("Please enter a valid email address");
 
@@ -301,27 +305,23 @@ const Landingpage = () => {
     seterror("");
 
     try {
-      const response = await fetch("https://sheetdb.io/api/v1/y0cinjma5dfxv", {
-        method: "POST",
-        headers: {
-          'accept': 'application/json',
-          'content-type': 'application/json'
+      const { error } = await supabase.from('waitlist').insert([
+        {
+          email: wait.trim(),
+          status: 'waiting',
         },
-        body: JSON.stringify({
-          data: [
-            {
-              EMAIL: wait,
-              STATUS: "waiting",
-              DATE: new Date().toISOString()
-            }
-          ]
-        })
-      });
-      if (response.ok) {
+      ]);
+
+      if (error) {
+        // Duplicate email
+        if (error.code === '23505') {
+          seterror("You're already on the waitlist!");
+        } else {
+          seterror(error.message || "Something went wrong. Please try again.");
+        }
+      } else {
         setIsWaitlistJoined(true);
         setWait("");
-      } else {
-        seterror("Something went wrong. Please try again.");
       }
     } catch (err) {
       console.error(err);
