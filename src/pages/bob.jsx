@@ -1,64 +1,80 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import './dashboard.css';
 
-const Bob = () => {
+/**
+ * Bob page – Coming Soon screen for the Bob AI assistant.
+ * Demonstrates high-fidelity visual layout using skeleton blurs and interactive notifications.
+ */
+export const Bob = () => {
   const { triggerToast } = useOutletContext();
   const [notified, setNotified] = useState(false);
 
   const handleNotifyClick = () => {
+    if (notified) return;
     setNotified(true);
-    triggerToast("Notification registered! We will ping you when Bob AI goes live.");
+    triggerToast('Added to Bob AI preview queue! We will notify you.');
   };
 
   return (
-    <div className="cs-page">
-      {/* Blurred background mock skeleton */}
-      <div className="cs-skeleton">
-        <div className="skel" style={{ height: '70px', border: '0.5px solid #1e2a38', marginBottom: '8px' }}></div>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-          <div className="skel" style={{ height: '55px', flex: 1, border: '0.5px solid #1e2a38' }}></div>
-          <div className="skel" style={{ height: '55px', flex: 1, border: '0.5px solid #1e2a38' }}></div>
+    <div className="view" id="view-bob" style={{ height: '100%' }}>
+      <div className="chat-header">
+        <div>
+          <h2>Bob</h2>
+          <div className="chat-sub">Your agency AI — coming in V1</div>
         </div>
-        <div className="skel" style={{ height: '40px', border: '0.5px solid #1e2a38', marginBottom: '8px' }}></div>
-        <div className="skel" style={{ height: '40px', border: '0.5px solid #1e2a38', marginBottom: '8px' }}></div>
-        <div className="skel" style={{ height: '40px', border: '0.5px solid #1e2a38', marginBottom: '8px' }}></div>
       </div>
 
-      {/* Foreground Overlay Content */}
-      <div className="cs-overlay">
-        <span className="cs-badge">COMING IN V1</span>
-        
-        <h2 className="cs-title">Meet Bob — your agency AI companion</h2>
-        <p className="cs-desc">
-          Bob handles client communications, drafts responses tailored to your custom tone, flags sentiment drops, and assists with research. Two modes, one AI helper.
-        </p>
-
-        <div className="cs-features" style={{ margin: '12px 0' }}>
-          <div className="cs-feat">
-            <i className="ti ti-brain"></i>
-            <span>Team Bob — shared client-aware model, fully logged</span>
+      <div className="cs-page">
+        {/* Blurred skeleton background representation */}
+        <div className="cs-skeleton">
+          <div className="skel" style={{ height: '80px', borderRadius: '10px' }}></div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="skel" style={{ height: '55px', flex: 1, borderRadius: '8px' }}></div>
+            <div className="skel" style={{ height: '55px', flex: 1, borderRadius: '8px' }}></div>
           </div>
-          <div className="cs-feat">
-            <i className="ti ti-lock"></i>
-            <span>My Bob — private research assistant only you can see</span>
-          </div>
-          <div className="cs-feat">
-            <i className="ti ti-world"></i>
-            <span>Internet connectivity for real-time market queries</span>
-          </div>
-          <div className="cs-feat">
-            <i className="ti ti-chart-line"></i>
-            <span>Sentiment metrics + WhatsApp anomaly flags</span>
-          </div>
+          <div className="skel" style={{ height: '45px', borderRadius: '8px' }}></div>
+          <div className="skel" style={{ height: '45px', borderRadius: '8px' }}></div>
+          <div className="skel" style={{ height: '45px', borderRadius: '8px' }}></div>
         </div>
 
-        <button className="cs-notify" onClick={handleNotifyClick} disabled={notified} style={notified ? { borderColor: 'var(--green)', color: 'var(--green)' } : {}}>
-          <i className="ti ti-bell"></i> {notified ? 'Notified ✓' : "Notify me when it's live"}
-        </button>
-
-        <div style={{ fontSize: '8px', color: '#334155', marginTop: '16px', letterSpacing: '1px' }}>
-          ATSYNC DEVELOPMENT ENVIRONMENT BUILD · V0.9.8
+        {/* Dynamic content overlay */}
+        <div className="cs-overlay">
+          <span className="cs-badge">COMING IN V1</span>
+          <div className="cs-title">Meet Bob — your agency AI</div>
+          <div className="cs-desc">
+            Bob handles client comms, drafts responses in your tone, flags sentiment shifts, and answers anything you throw at him. Team Bob and My Bob — two modes, one assistant.
+          </div>
+          <div className="cs-features">
+            <div className="cs-feat">
+              <i className="ti ti-brain"></i>
+              <span>Team Bob — shared, client-aware, fully logged</span>
+            </div>
+            <div className="cs-feat">
+              <i className="ti ti-lock"></i>
+              <span>My Bob — private assistant only you can see</span>
+            </div>
+            <div className="cs-feat">
+              <i className="ti ti-world"></i>
+              <span>Research, weather, general Q&A anytime</span>
+            </div>
+            <div className="cs-feat">
+              <i className="ti ti-chart-line"></i>
+              <span>Sentiment tracking + proactive client alerts</span>
+            </div>
+          </div>
+          <button
+            className="cs-notify"
+            onClick={handleNotifyClick}
+            style={{
+              borderColor: notified ? 'var(--green)' : 'var(--cyan)',
+              color: notified ? 'var(--green)' : 'var(--cyan)',
+              cursor: notified ? 'default' : 'pointer',
+            }}
+            type="button"
+          >
+            <i className={`ti ${notified ? 'ti-check' : 'ti-bell'}`} style={{ fontSize: '12px' }}></i>{' '}
+            {notified ? 'Subscribed ✓' : 'Notify me when it\'s live'}
+          </button>
         </div>
       </div>
     </div>

@@ -1,157 +1,227 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { initialIntakeStats, initialIntakeSubmissions } from './dashboardData';
-import './dashboard.css';
 
-const IntakeLinks = () => {
+/**
+ * IntakeLinks page – displays intake stats, recent client questionnaire submissions,
+ * onboarding approvals, and a history log of scope creep flags.
+ */
+export const IntakeLinks = () => {
   const navigate = useNavigate();
-  const { clients, setActiveClientId, triggerToast } = useOutletContext();
-  
-  const [loading, setLoading] = useState(true);
-  const [submissions, setSubmissions] = useState([]);
-  const [stats, setStats] = useState({});
+  const {
+    clients = [],
+    setClients,
+    loading,
+    triggerToast,
+    setNotificationsList,
+    setActiveClientId,
+  } = useOutletContext();
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSubmissions(initialIntakeSubmissions);
-      setStats(initialIntakeStats);
-      setLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
+  const activeClients = clients.filter(c => c.type === 'active');
+  const pendingClients = clients.filter(c => c.type === 'pending');
 
-  // Dynamically aggregate scope creep logs across active client rosters
-  const scopeCreepLog = clients.flatMap(c => 
-    (c.scopeCreepLog || []).map(log => ({
-      clientId: c.id,
-      clientName: c.name,
-      ...log
-    }))
-  );
+  const handleApprove = (client) => {
+    setClients(prev => prev.map(c =>
+      c.id !== client.id ? c : {
+        ...c,
+        type: 'active',
+        statusDot: 'green',
+        alertBadge: 'ready',
+        alertDesc: 'Brief approved – phase 2 ready',
+        progress: 25,
+        sentiment: 90,
+        sentimentLabel: 'Great',
+        sentimentColor: 'green',
+        priorityAction: 'Setup kickoff meeting with product owner.',
+        tasks: [
+          { id: 1, text: 'Confirm project scope & details', completed: false, hours: 2, remaining: 2 },
+          { id: 2, text: 'Establish Slack / Communication group', completed: false, hours: 1, remaining: 1 }
+        ],
+        timeline: [
+          { id: 1, date: 'Pending', title: 'Phase 1 — Onboarding', status: 'Active', progress: 50, active: true }
+        ],
+        chatLog: [
+          {
+            id: Date.now(),
+            sender: 'bob',
+            senderName: 'BOB AI',
+            avatarInitials: 'B',
+            text: `Welcome onboard ${client.name}! Let's start by reviewing the project specifications.`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]
+      }
+    ));
 
-  const handleActionClick = (clientName) => {
-    // Attempt to map intake submission to a client roster item
-    const matched = clients.find(c => c.name.toLowerCase().includes(clientName.toLowerCase()) || clientName.toLowerCase().includes(c.name.toLowerCase()));
-    if (matched) {
-      setActiveClientId(matched.id);
-      navigate('/dashboard/clients');
-      triggerToast(`Navigated to chat view for ${matched.name}`);
-    } else {
-      triggerToast(`Opening questionnaire details for ${clientName}`);
-    }
+    triggerToast(`${client.name} moved to Active Roster!`);
+    setNotificationsList(prev => [
+      { id: Date.now(), text: `${client.name} is now onboarded to Active Roster.`, read: false },
+      ...prev
+    ]);
+
+    // Redirect to the newly onboarded client's chat
+    setActiveClientId(client.id);
+    navigate('/dashboard/clients');
   };
 
+  const handleSendToMarket = (leadName) => {
+    triggerToast(`Lead "${leadName}" sent to the ATSYNC Marketplace!`);
+    setNotificationsList(prev => [
+      { id: Date.now(), text: `Lead "${leadName}" listed on the Agency Marketplace.`, read: false },
+      ...prev
+    ]);
+  };
+
+  // Compile all scope creep logs from active clients
+  const allScopeLogs = clients.reduce((acc, c) => {
+    if (c.scopeCreepLog && c.scopeCreepLog.length > 0) {
+      c.scopeCreepLog.forEach(log => {
+        acc.push({
+          clientId: c.id,
+          clientName: c.name,
+          ...log
+        });
+      });
+    }
+    return acc;
+  }, []);
+
   return (
-    <div className="db-middle-panel" style={{ height: '100%', overflowY: 'auto' }}>
-      <section className="db-header">
+    <div className="db-middle-panel" style={{ padding: '16px' }}>
+      <div className="db-header">
         <h1>Intake Links</h1>
         <p>Submissions, responses, and scope creep logs</p>
-      </section>
+      </div>
 
-      {/* Intake Stats */}
-      <section className="db-stats-grid" style={{ marginBottom: '28px' }}>
-        {loading ? (
-          Array.from({ length: 4 }).map((_, idx) => (
-            <div className="stat-card db-skeleton" key={idx} style={{ minHeight: '90px' }}>
-              <div className="db-skeleton-text short"></div>
-              <div className="db-skeleton-text" style={{ height: '24px', width: '40%' }}></div>
-            </div>
-          ))
-        ) : (
-          <>
-            <div className="stat-card">
-              <span className="stat-card-label">Links Sent</span>
-              <div className="stat-card-value">{stats.linksSent}</div>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card-label">Submitted</span>
-              <div className="stat-card-value">{stats.submitted}</div>
-              <span className="stat-card-subtext">75% conversion rate</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card-label">Converted</span>
-              <div className="stat-card-value">{stats.converted}</div>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card-label">Pending</span>
-              <div className="stat-card-value">{stats.pending}</div>
-            </div>
-          </>
-        )}
-      </section>
+      {/* Stats cards */}
+      <div className="db-stats-grid">
+        <div className="stat-card">
+          <div className="stat-card-label">LINKS SENT</div>
+          <div className="stat-card-value">8</div>
+          <div className="stat-card-subtext">Active links</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-label">SUBMITTED</div>
+          <div className="stat-card-value">6</div>
+          <div className="stat-card-subtext">75% submission rate</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-label">CONVERTED</div>
+          <div className="stat-card-value">{activeClients.length}</div>
+          <div className="stat-card-subtext">From intake</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-label">PENDING</div>
+          <div className="stat-card-value">{pendingClients.length}</div>
+          <div className="stat-card-subtext">Awaiting review</div>
+        </div>
+      </div>
 
-      {/* Submissions list */}
-      <section style={{ marginBottom: '28px' }}>
+      {/* Recent submissions table */}
+      <div style={{ marginTop: '20px' }}>
         <div className="alerts-section-title">RECENT SUBMISSIONS</div>
         <div className="alerts-list">
-          {loading ? (
-            Array.from({ length: 3 }).map((_, idx) => (
-              <div className="alert-row db-skeleton" key={idx} style={{ height: '55px' }}>
-                <div style={{ width: '70%' }}>
-                  <div className="db-skeleton-text" style={{ width: '45%' }}></div>
-                  <div className="db-skeleton-text long"></div>
-                </div>
-              </div>
-            ))
-          ) : submissions.length === 0 ? (
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', padding: '20px' }}>
-              No link submissions registered.
-            </div>
-          ) : (
-            submissions.map(sub => (
-              <div key={sub.id} className="alert-row" style={{ padding: '12px 18px' }}>
+          {/* Mock submissions + dynamic items */}
+          {clients.map((c) => {
+            const isPending = c.type === 'pending';
+            const isActive = c.type === 'active';
+            
+            return (
+              <div key={c.id} className="alert-row" style={{ cursor: 'default' }}>
                 <div className="alert-info">
-                  <span className="alert-company">{sub.client} — {sub.name}</span>
-                  <span className="alert-desc" style={{ fontSize: '0.7rem' }}>
-                    {sub.service} · Budget: {sub.budget} · Date: {sub.date}
-                  </span>
+                  <div className="alert-company">{c.name}</div>
+                  <div className="alert-desc">{c.service} · {c.budget} · {c.deadline}</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span className={`alert-badge ${sub.status === 'Active' ? 'ready' : sub.status === 'Pending' ? 'urgent' : 'overdue'}`}>
-                    {sub.status}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className={`alert-badge ${isActive ? 'ready' : 'pending'}`}>
+                    {isActive ? 'Active' : 'Pending'}
                   </span>
-                  <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => handleActionClick(sub.client)}>
-                    {sub.status === 'Pending' ? 'Review' : 'View answers'}
-                  </button>
+                  {isPending ? (
+                    <button
+                      className="row-btn"
+                      onClick={() => handleApprove(c)}
+                      style={{
+                        borderColor: 'var(--cyan)',
+                        color: 'var(--cyan)',
+                        cursor: 'pointer',
+                      }}
+                      type="button"
+                    >
+                      Approve
+                    </button>
+                  ) : (
+                    <button
+                      className="row-btn"
+                      onClick={() => {
+                        setActiveClientId(c.id);
+                        navigate('/dashboard/clients');
+                      }}
+                      style={{ cursor: 'pointer' }}
+                      type="button"
+                    >
+                      View
+                    </button>
+                  )}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </section>
+            );
+          })}
 
-      {/* Scope Creep Log */}
-      <section>
+          {/* Anon rejected lead */}
+          <div className="alert-row" style={{ cursor: 'default' }}>
+            <div className="alert-info">
+              <div className="alert-company">Anon Lead</div>
+              <div className="alert-desc">Ecommerce · ₦200k · Rejected due to low budget</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="alert-badge overdue">Rejected</span>
+              <button
+                className="row-btn"
+                onClick={() => handleSendToMarket('Anon Lead (Ecommerce)')}
+                style={{
+                  borderColor: 'var(--yellow)',
+                  color: 'var(--yellow)',
+                  cursor: 'pointer',
+                }}
+                type="button"
+              >
+                Send to market
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scope creep log */}
+      <div style={{ marginTop: '20px' }}>
         <div className="alerts-section-title">SCOPE CREEP LOG</div>
         <div className="alerts-list">
           {loading ? (
-            Array.from({ length: 2 }).map((_, idx) => (
-              <div className="alert-row db-skeleton" key={idx} style={{ height: '50px' }}>
-                <div className="db-skeleton-text" style={{ width: '60%' }}></div>
-              </div>
-            ))
-          ) : scopeCreepLog.length === 0 ? (
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', padding: '20px' }}>
-              No scope creep occurrences logged.
-            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Loading logs...</div>
+          ) : allScopeLogs.length === 0 ? (
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No scope creep flags reported</div>
           ) : (
-            scopeCreepLog.map(log => (
-              <div key={log.id} className="alert-row" style={{ padding: '12px 18px' }}>
-                <div className="alert-info">
-                  <span className="alert-company" style={{ fontSize: '0.85rem' }}>{log.clientName}</span>
-                  <span className="alert-desc" style={{ fontSize: '0.72rem' }}>{log.desc}</span>
+            allScopeLogs.map((log, index) => {
+              const isResolved = log.status === 'Resolved';
+              return (
+                <div key={index} className="alert-row" style={{ cursor: 'default' }}>
+                  <div className="alert-info">
+                    <div className="alert-company">{log.clientName}</div>
+                    <div className="alert-desc">{log.desc}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+                      {log.date}
+                    </span>
+                    <span className={`alert-badge ${isResolved ? 'ready' : 'overdue'}`}>
+                      {log.status}
+                    </span>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span className="alert-desc" style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{log.date}</span>
-                  <span className={`alert-badge ${log.status === 'Resolved' ? 'ready' : 'overdue'}`}>
-                    {log.status}
-                  </span>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
-      </section>
+      </div>
     </div>
   );
 };

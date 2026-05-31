@@ -1,110 +1,108 @@
 import React from 'react';
-import { useOutletContext } from 'react-router-dom';
-import './dashboard.css';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 
-const Dashboard = () => {
+/**
+ * Dashboard page – renders the main overview with statistics and active alerts.
+ * Uses the context provided by DashboardLayout.
+ */
+export const Dashboard = () => {
+  const navigate = useNavigate();
   const {
-    clients,
+    clients = [],
+    activeClientsCount = 0,
+    pendingIntakeCount = 0,
+    openApprovalsCount = 0,
+    scopeFlagsCount = 0,
     setActiveClientId,
     loading,
-    activeClientsCount,
-    pendingIntakeCount,
-    openApprovalsCount,
-    scopeFlagsCount
   } = useOutletContext();
 
+  const activeClients = clients.filter(c => c.type === 'active');
+
+  const getAlertBadgeClass = (badge) => {
+    if (badge === 'warning') return 'urgent';
+    if (badge === 'overdue') return 'overdue';
+    if (badge === 'ready') return 'ready';
+    return 'pending';
+  };
+
+  const getAlertBadgeLabel = (badge) => {
+    if (badge === 'warning') return 'Urgent';
+    if (badge === 'overdue') return 'Overdue';
+    if (badge === 'ready') return 'Ready';
+    return 'Pending';
+  };
+
+  const handleAlertClick = (clientId) => {
+    setActiveClientId(clientId);
+    navigate('/dashboard/clients');
+  };
+
   return (
-    <div className="db-middle-panel" style={{ height: '100%', overflowY: 'auto' }}>
-      <section className="db-header">
+    <div className="db-middle-panel" style={{ padding: '16px' }}>
+      <div className="db-header">
         <h1>Dashboard</h1>
         <p>Your agency overview</p>
-      </section>
+      </div>
 
-      {/* Stats Grid */}
-      <section className="db-stats-grid">
-        {loading ? (
-          Array.from({ length: 4 }).map((_, idx) => (
-            <div className="stat-card db-skeleton" key={idx} style={{ minHeight: '110px' }}>
-              <div className="db-skeleton-text short"></div>
-              <div className="db-skeleton-text" style={{ height: '28px', width: '50%' }}></div>
-              <div className="db-skeleton-text short"></div>
-            </div>
-          ))
-        ) : (
-          <>
-            <div className="stat-card">
-              <span className="stat-card-label">Active Clients</span>
-              <div className="stat-card-value">{activeClientsCount}</div>
-              <span className="stat-card-subtext">+1 this month</span>
-            </div>
+      {loading ? (
+        <div className="db-stats-grid" style={{ opacity: 0.5 }}>
+          <div className="stat-card"><div className="stat-card-label">LOADING STATS...</div></div>
+          <div className="stat-card"><div className="stat-card-label">LOADING STATS...</div></div>
+          <div className="stat-card"><div className="stat-card-label">LOADING STATS...</div></div>
+          <div className="stat-card"><div className="stat-card-label">LOADING STATS...</div></div>
+        </div>
+      ) : (
+        <div className="db-stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-label">ACTIVE CLIENTS</div>
+            <div className="stat-card-value">{activeClientsCount}</div>
+            <div className="stat-card-subtext">+1 this month</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-label">PENDING INTAKE</div>
+            <div className="stat-card-value">{pendingIntakeCount}</div>
+            <div className="stat-card-subtext">Awaiting review</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-label">OPEN APPROVALS</div>
+            <div className="stat-card-value">{openApprovalsCount}</div>
+            <div className="stat-card-subtext">Quantum Logic</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-label">SCOPE FLAGS</div>
+            <div className="stat-card-value red">{scopeFlagsCount}</div>
+            <div className="stat-card-subtext">This week</div>
+          </div>
+        </div>
+      )}
 
-            <div className="stat-card">
-              <span className="stat-card-label">Pending Intake</span>
-              <div className="stat-card-value">{pendingIntakeCount}</div>
-              <span className="stat-card-subtext">Awaiting review</span>
-            </div>
-
-            <div className="stat-card">
-              <span className="stat-card-label">Open Approvals</span>
-              <div className="stat-card-value">
-                {openApprovalsCount}
-              </div>
-              <span className="stat-card-subtext" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                {clients.find(c => c.alertBadge === 'ready')?.name || 'None pending'}
-              </span>
-            </div>
-
-            <div className="stat-card red-flag">
-              <span className="stat-card-label">Scope Flags</span>
-              <div className="stat-card-value red">{scopeFlagsCount}</div>
-              <span className="stat-card-subtext">This week</span>
-            </div>
-          </>
-        )}
-      </section>
-
-      {/* Alerts section */}
-      <section>
+      <div style={{ marginTop: '20px' }}>
         <div className="alerts-section-title">ALERTS</div>
         <div className="alerts-list">
           {loading ? (
-            <>
-              <div className="alert-row db-skeleton" style={{ height: '62px' }}>
-                <div style={{ width: '60%' }}>
-                  <div className="db-skeleton-text" style={{ width: '40%', height: '14px' }}></div>
-                  <div className="db-skeleton-text long"></div>
-                </div>
-                <div className="db-skeleton-text" style={{ width: '60px', height: '20px', borderRadius: '4px' }}></div>
-              </div>
-              <div className="alert-row db-skeleton" style={{ height: '62px' }}>
-                <div style={{ width: '60%' }}>
-                  <div className="db-skeleton-text" style={{ width: '30%', height: '14px' }}></div>
-                  <div className="db-skeleton-text long"></div>
-                </div>
-                <div className="db-skeleton-text" style={{ width: '60px', height: '20px', borderRadius: '4px' }}></div>
-              </div>
-            </>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Loading alerts...</div>
+          ) : activeClients.length === 0 ? (
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No active client alerts</div>
           ) : (
-            clients
-              .filter(c => c.alertBadge !== null)
-              .map(c => (
-                <div
-                  key={c.id}
-                  className="alert-row"
-                  onClick={() => setActiveClientId(c.id)}
-                >
-                  <div className="alert-info">
-                    <span className="alert-company">{c.name}</span>
-                    <span className="alert-desc">{c.alertDesc}</span>
-                  </div>
-                  <span className={`alert-badge ${c.alertBadge}`}>
-                    {c.alertBadge}
-                  </span>
+            activeClients.map((client) => (
+              <div
+                key={client.id}
+                className="alert-row"
+                onClick={() => handleAlertClick(client.id)}
+              >
+                <div className="alert-info">
+                  <div className="alert-company">{client.name}</div>
+                  <div className="alert-desc">{client.alertDesc || 'All clear'}</div>
                 </div>
-              ))
+                <span className={`alert-badge ${getAlertBadgeClass(client.alertBadge)}`}>
+                  {getAlertBadgeLabel(client.alertBadge)}
+                </span>
+              </div>
+            ))
           )}
         </div>
-      </section>
+      </div>
     </div>
   );
 };

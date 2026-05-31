@@ -1,26 +1,23 @@
-// dashboardData.js
-// Mock data for the ATSYNC Dashboard to separate data from UI logic.
+// ATSYNC Dashboard Mock Data
 
 export const initialClients = [
   {
     id: 'quantum-logic',
     name: 'Quantum Logic',
+    company: 'Quantum Logic',
     type: 'active',
-    statusDot: 'yellow',
+    statusDot: 'orange', // maps to 'da' (alert) or custom css
+    alertBadge: 'warning',
     alertDesc: 'Awaiting response on timeline request',
-    alertBadge: 'urgent',
     sentiment: 85,
-    sentimentLabel: 'Cautious',
+    sentimentLabel: 'Cautious →',
     sentimentColor: 'yellow',
     progress: 62,
-    priorityAction: 'Review resource allocation for staggered testing schedule.',
     budget: '$12,000',
     deadline: 'Aug 30',
     service: 'UI + Testing',
     briefLocked: true,
-    scopeCreepLog: [
-      { id: 1, desc: 'Mobile breakpoints added after brief lock', date: 'Jun 17', status: 'Flagged' }
-    ],
+    priorityAction: 'Review resource allocation for staggered testing schedule.',
     tasks: [
       { id: 1, text: 'Finalize V2 wireframes', completed: false, hours: 8, remaining: 8 },
       { id: 2, text: 'Draft testing protocol', completed: false, hours: 4, remaining: 2 },
@@ -32,151 +29,173 @@ export const initialClients = [
       { id: 3, date: 'Jul 6 – Jul 20', title: 'Phase 3 — Testing', status: 'Pending', progress: 0, active: false }
     ],
     chatLog: [
-      { id: 1, sender: 'client', senderName: 'SARAH J.', avatar: 'SJ', text: "The latest wireframes look solid. The executive team is asking if we can accelerate the timeline for user testing. What's the impact if we pull it in by a week?", time: '10:42 AM' },
-      { id: 2, sender: 'agency', senderName: 'YOU', avatar: 'DZ', text: 'Understood. Reviewing resource allocation now — we might be able to do a staggered approach. Let me run the numbers.', time: '11:05 AM' }
+      {
+        id: 1,
+        sender: 'client',
+        senderName: 'SARAH J.',
+        avatarInitials: 'SJ',
+        text: "The latest wireframes look solid. The executive team is asking if we can accelerate the timeline for user testing. What's the impact if we pull it in by a week?",
+        time: '10:42 AM'
+      },
+      {
+        id: 2,
+        sender: 'agency',
+        senderName: 'DANIEL',
+        avatarInitials: 'DZ',
+        text: 'Understood. Reviewing resource allocation now — we might be able to do a staggered approach. Let me run the numbers.',
+        time: '11:05 AM'
+      }
+    ],
+    scopeCreepLog: [
+      { id: 1, desc: 'Mobile breakpoints added after brief lock', date: 'Jun 17', status: 'Flagged' }
     ]
   },
   {
     id: 'apex-ventures',
     name: 'Apex Ventures',
+    company: 'Apex Ventures',
     type: 'active',
-    statusDot: 'green',
-    alertDesc: 'Brief approved – phase 2 ready',
+    statusDot: 'green', // maps to 'dg'
     alertBadge: 'ready',
-    sentiment: 94,
+    alertDesc: 'Brief approved — phase 2 ready',
+    sentiment: 92,
     sentimentLabel: 'Great',
     sentimentColor: 'green',
-    progress: 45,
-    priorityAction: 'Initiate Phase 2 layout wireframes and user journeys review.',
+    progress: 100,
     budget: '$8,500',
-    deadline: 'Sep 15',
-    service: 'Branding + UI',
-    briefLocked: false,
-    scopeCreepLog: [
-      { id: 1, desc: 'Copy changes post-approval', date: 'Jun 9', status: 'Resolved' }
-    ],
+    deadline: 'Jul 15',
+    service: 'Branding + Deck',
+    briefLocked: true,
+    priorityAction: 'Kick off Deck design phase with brand guidelines.',
     tasks: [
-      { id: 1, text: 'Kickoff meeting for phase 2 layout', completed: true, hours: 4, remaining: 0 },
-      { id: 2, text: 'Drafting brand guidelines document', completed: false, hours: 8, remaining: 8 },
-      { id: 3, text: 'Create logo options', completed: false, hours: 6, remaining: 4 }
+      { id: 1, text: 'Create style guide drafts', completed: true, hours: 5, remaining: 0 },
+      { id: 2, text: 'Confirm deck slides outline', completed: true, hours: 3, remaining: 0 }
     ],
     timeline: [
-      { id: 1, date: 'Jul 1 – Jul 15', title: 'Phase 1 — Discovery', status: 'Done', progress: 100, active: false },
-      { id: 2, date: 'Jul 16 – Aug 5', title: 'Phase 2 — Design', status: '45%', progress: 45, active: true },
-      { id: 3, date: 'Aug 6 – Aug 20', title: 'Phase 3 — Testing', status: 'Pending', progress: 0, active: false }
+      { id: 1, date: 'May 1 – May 15', title: 'Phase 1 — Discovery', status: 'Done', progress: 100, active: false },
+      { id: 2, date: 'May 16 – Jun 1', title: 'Phase 2 — Branding', status: 'Done', progress: 100, active: false }
     ],
     chatLog: [
-      { id: 1, sender: 'client', senderName: 'MARK T.', avatar: 'MT', text: 'Looking forward to the branding presentation next week. We really want to make sure the primary colors align with our eco-friendly goals.', time: '09:15 AM' },
-      { id: 2, sender: 'agency', senderName: 'YOU', avatar: 'DZ', text: 'Absolutely Mark, we have prepared three distinct nature-inspired color systems for your team to choose from.', time: '10:00 AM' }
+      {
+        id: 1,
+        sender: 'client',
+        senderName: 'MARCUS K.',
+        avatarInitials: 'MK',
+        text: 'The branding assets look amazing. We are ready to proceed to the pitch deck design.',
+        time: 'Yesterday'
+      },
+      {
+        id: 2,
+        sender: 'agency',
+        senderName: 'DANIEL',
+        avatarInitials: 'DZ',
+        text: 'Awesome news! Phase 2 is fully approved. Setting up the pitch deck templates now.',
+        time: 'Yesterday'
+      }
+    ],
+    scopeCreepLog: [
+      { id: 1, desc: 'Copy changes post-approval', date: 'Jun 9', status: 'Resolved' }
     ]
   },
   {
     id: 'nexus-core',
     name: 'Nexus Core',
+    company: 'Nexus Core',
     type: 'active',
-    statusDot: 'red',
-    alertDesc: 'No reply in 4 days',
+    statusDot: 'red', // maps to 'dr'
     alertBadge: 'overdue',
-    sentiment: 32,
-    sentimentLabel: 'Risk',
+    alertDesc: 'No reply in 4 days',
+    sentiment: 45,
+    sentimentLabel: 'Critical',
     sentimentColor: 'red',
     progress: 15,
-    priorityAction: 'Escalate communication block with engineering team. Send follow-up email.',
-    budget: '$18,200',
-    deadline: 'Jul 20',
-    service: 'Full Stack App',
-    briefLocked: true,
-    scopeCreepLog: [
-      { id: 1, desc: 'CRM integration outside agreement', date: 'Jun 14', status: 'Flagged' }
-    ],
+    budget: '$25,000',
+    deadline: 'Oct 15',
+    service: 'Full Platform Dev',
+    briefLocked: false,
+    priorityAction: 'Follow up with product owner immediately.',
     tasks: [
-      { id: 1, text: 'Backend DB configuration', completed: true, hours: 12, remaining: 0 },
-      { id: 2, text: 'Resolve communication blocker', completed: false, hours: 4, remaining: 4 },
-      { id: 3, text: 'CRM api mapping', completed: false, hours: 10, remaining: 10 }
+      { id: 1, text: 'Draft technical specifications', completed: false, hours: 12, remaining: 12 },
+      { id: 2, text: 'Set up repo & backend schema', completed: false, hours: 8, remaining: 8 }
     ],
     timeline: [
-      { id: 1, date: 'Jun 1 – Jun 15', title: 'Phase 1 — Discovery', status: 'Done', progress: 100, active: false },
-      { id: 2, date: 'Jun 16 – Jul 10', title: 'Phase 2 — Backend Dev', status: '15%', progress: 15, active: true },
-      { id: 3, date: 'Jul 11 – Aug 5', title: 'Phase 3 — Frontend Dev', status: 'Pending', progress: 0, active: false }
+      { id: 1, date: 'Jun 10 – Jun 20', title: 'Phase 1 — ArchitectureSpecs', status: '15%', progress: 15, active: true }
     ],
     chatLog: [
-      { id: 1, sender: 'agency', senderName: 'YOU', avatar: 'DZ', text: 'Hey Nexus team, we have completed the baseline schema designs. We need your CRM access credentials to proceed with the setup. Please share them.', time: 'Monday' },
-      { id: 2, sender: 'agency', senderName: 'YOU', avatar: 'DZ', text: 'Following up on the credentials so we do not fall behind on the timeline. Let me know when you can send them over.', time: 'Wednesday' }
+      {
+        id: 1,
+        sender: 'agency',
+        senderName: 'DANIEL',
+        avatarInitials: 'DZ',
+        text: 'Hi Sarah, following up on the tech specs document. Let me know when your team has a slot to review it.',
+        time: '4 days ago'
+      }
+    ],
+    scopeCreepLog: [
+      { id: 1, desc: 'CRM integration outside agreement', date: 'Jun 14', status: 'Flagged' }
     ]
   },
   {
     id: 'kola-creatives',
     name: 'Kola Creatives',
+    company: 'Kola Creatives',
     type: 'pending',
-    statusDot: 'gray',
-    alertDesc: 'Intake links completed – waiting for review',
-    alertBadge: null,
-    sentiment: 70,
-    sentimentLabel: 'Awaiting Review',
+    statusDot: 'yellow',
+    alertBadge: 'pending',
+    alertDesc: 'Awaiting questionnaire submission',
+    sentiment: '—',
+    sentimentLabel: 'Pending',
     sentimentColor: 'yellow',
     progress: 0,
-    priorityAction: 'Review intake details and approve onboarding to start workspace.',
-    budget: '$5,000',
-    deadline: 'Oct 10',
-    service: 'Copywriting',
+    budget: '₦800k',
+    deadline: 'Jun 18',
+    service: 'Website Redesign',
     briefLocked: false,
-    scopeCreepLog: [],
+    priorityAction: 'Send reminder for questionnaire.',
     tasks: [
-      { id: 1, text: 'Approve intake questionnaire', completed: false, hours: 2, remaining: 2 }
+      { id: 1, text: 'Awaiting intake completion', completed: false, hours: 0, remaining: 0 }
     ],
     timeline: [
-      { id: 1, date: 'May 20', title: 'Intake Sent', status: 'Active', progress: 50, active: true }
+      { id: 1, date: 'Pending', title: 'Intake Questionnaire', status: 'Pending', progress: 0, active: true }
     ],
-    chatLog: []
+    chatLog: [],
+    scopeCreepLog: []
   },
   {
     id: 'zuri-media',
     name: 'Zuri Media',
+    company: 'Zuri Media',
     type: 'pending',
-    statusDot: 'gray',
-    alertDesc: 'Intake form sent to client team',
-    alertBadge: null,
-    sentiment: 60,
-    sentimentLabel: 'Sent Link',
+    statusDot: 'yellow',
+    alertBadge: 'pending',
+    alertDesc: 'Awaiting questionnaire submission',
+    sentiment: '—',
+    sentimentLabel: 'Pending',
     sentimentColor: 'yellow',
     progress: 0,
-    priorityAction: 'Remind client team to submit intake details before project kickoff.',
-    budget: '$9,000',
-    deadline: 'Nov 01',
-    service: 'Social Media',
+    budget: '₦1.2M',
+    deadline: 'Jun 19',
+    service: 'AI Chatbot',
     briefLocked: false,
-    scopeCreepLog: [],
+    priorityAction: 'Awaiting onboarding data.',
     tasks: [
-      { id: 1, text: 'Awaiting client response', completed: false, hours: 5, remaining: 5 }
+      { id: 1, text: 'Awaiting intake completion', completed: false, hours: 0, remaining: 0 }
     ],
     timeline: [
-      { id: 1, date: 'May 22', title: 'Intake Created', status: 'Active', progress: 20, active: true }
+      { id: 1, date: 'Pending', title: 'Intake Questionnaire', status: 'Pending', progress: 0, active: true }
     ],
-    chatLog: []
+    chatLog: [],
+    scopeCreepLog: []
   }
 ];
 
 export const initialNotifications = [
-  { id: 1, text: 'Quantum Logic timeline request is pending.', read: false },
-  { id: 2, text: 'Nexus Core communication block flag active.', read: false }
+  { id: 1, text: 'Quantum Logic flagged a new scope creep item: Mobile breakpoints.', read: false },
+  { id: 2, text: 'Nexus Core has not responded to messages in 4 days.', read: false },
+  { id: 3, text: 'Apex Ventures approved their Phase 2 Brief.', read: true }
 ];
 
 export const initialChatMessages = [
-  { sender: 'bob', text: 'Atsync AI Companion v1 online. Running client monitoring scans...' },
-  { sender: 'bob', text: 'Quantum Logic requires attention (Urgent alert flag). Need me to send a WhatsApp nudger?' }
-];
-
-// Intake statistics and submissions
-export const initialIntakeStats = {
-  linksSent: 8,
-  submitted: 6,
-  converted: 3,
-  pending: 2
-};
-
-export const initialIntakeSubmissions = [
-  { id: 1, client: 'Quantum Logic', name: 'Sarah J.', service: 'UI Design + Testing', budget: '$12,000', date: 'Jun 10', status: 'Active' },
-  { id: 2, client: 'Kola Creatives', name: 'Kola A.', service: 'Website Redesign', budget: '₦800k', date: 'Jun 18', status: 'Pending' },
-  { id: 3, client: 'Zuri Media', name: 'Zuri O.', service: 'AI Chatbot', budget: '₦1.2M', date: 'Jun 19', status: 'Pending' },
-  { id: 4, client: 'Anon Lead', name: 'Anonymous', service: 'Ecommerce', budget: '₦200k', date: 'Rejected', status: 'Rejected' }
+  { sender: 'bob', text: "Hello Daniel! I'm Bob, your agency AI. I track roster status, alert you to scope creep, and draft client nudges." },
+  { sender: 'bob', text: "Try asking me 'status' or 'nudge'." }
 ];

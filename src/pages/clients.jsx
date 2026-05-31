@@ -1,223 +1,285 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import './dashboard.css';
 
-const Clients = () => {
+/**
+ * Clients page – renders the client messaging interface, approval trigger, and approval request modal.
+ * Uses context from DashboardLayout.
+ */
+export const Clients = () => {
   const {
-    clients,
+    clients = [],
     setClients,
-    activeClient,
+    activeClient = {},
     loading,
-    triggerToast
+    triggerToast,
+    setNotificationsList,
   } = useOutletContext();
 
-  const [chatInputText, setChatInputText] = useState('');
-  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
-  const [approvalItem, setApprovalItem] = useState('Final Phase 2 Wireframes');
+  const [messageInput, setMessageInput] = useState('');
+  const [isApprovalOpen, setIsApprovalOpen] = useState(false);
+  const [approvalRequestText, setApprovalRequestText] = useState('');
+  
+  const chatEndRef = useRef(null);
 
-  // Send a regular chat message
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [activeClient?.chatLog]);
+
+  const hasClient = activeClient && activeClient.id;
+
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!chatInputText.trim()) return;
+    if (!messageInput.trim() || !hasClient) return;
 
-    const newMsg = {
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const userMsg = {
       id: Date.now(),
       sender: 'agency',
-      senderName: 'YOU',
-      avatar: 'DZ',
-      text: chatInputText.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      senderName: 'DANIEL',
+      avatarInitials: 'DZ',
+      text: messageInput.trim(),
+      time: time,
     };
 
+    // Update client chat log
     setClients(prev => prev.map(c => {
-      if (c.id === activeClient.id) {
-        return {
-          ...c,
-          chatLog: [...(c.chatLog || []), newMsg]
-        };
-      }
-      return c;
+      if (c.id !== activeClient.id) return c;
+      return {
+        ...c,
+        chatLog: [...(c.chatLog || []), userMsg]
+      };
     }));
 
-    setChatInputText('');
-    triggerToast("Message sent to client!");
+    const clientMsgText = messageInput.trim();
+    setMessageInput('');
+
+    // Simulate client response after 1.5 seconds
+    setTimeout(() => {
+      let clientResponseText = "Thanks for the update, Daniel. Our team is reviewing this and will get back to you shortly.";
+      
+      const lowerText = clientMsgText.toLowerCase();
+      if (lowerText.includes('price') || lowerText.includes('cost') || lowerText.includes('budget')) {
+        clientResponseText = "Yes, the budget of " + activeClient.budget + " works for us. Let's make sure the deliverable covers all requirements.";
+      } else if (lowerText.includes('timeline') || lowerText.includes('schedule') || lowerText.includes('delay')) {
+        clientResponseText = "Regarding the timeline: can we push the review meeting to next Tuesday instead?";
+      } else if (lowerText.includes('approve') || lowerText.includes('sign off')) {
+        clientResponseText = "Excellent. We will look out for the approval request banner and approve it on our portal.";
+      }
+
+      const clientMsg = {
+        id: Date.now() + 1,
+        sender: 'client',
+        senderName: activeClient.name.toUpperCase(),
+        avatarInitials: activeClient.chatLog?.[0]?.avatarInitials || activeClient.name.split(' ').map(n => n[0]).join(''),
+        text: clientResponseText,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setClients(prev => prev.map(c => {
+        if (c.id !== activeClient.id) return c;
+        return {
+          ...c,
+          chatLog: [...(c.chatLog || []), clientMsg]
+        };
+      }));
+    }, 1500);
   };
 
-  // Submit approval request from Modal
-  const handleSendApprovalRequest = (e) => {
+  const handleOpenApprovalModal = () => {
+    setApprovalRequestText(`Approval request for ${activeClient.service || 'deliverables'}`);
+    setIsApprovalOpen(true);
+  };
+
+  const handleSendApproval = (e) => {
     e.preventDefault();
-    if (!approvalItem.trim()) return;
+    if (!hasClient) return;
 
-    const systemMsg = {
-      id: Date.now(),
-      sender: 'system',
-      senderName: 'SYSTEM',
-      avatar: 'SYS',
-      text: `SYSTEM: Approval request sent for "${approvalItem}" — Locked Price: ${activeClient.budget || '—'} (1% platform fee applied upon payout).`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
+    // Update client status/alerts
     setClients(prev => prev.map(c => {
-      if (c.id === activeClient.id) {
-        return {
-          ...c,
-          chatLog: [...(c.chatLog || []), systemMsg],
-          alertBadge: 'urgent',
-          alertDesc: `Awaiting approval response on "${approvalItem}"`
-        };
-      }
-      return c;
+      if (c.id !== activeClient.id) return c;
+      return {
+        ...c,
+        alertBadge: 'ready',
+        alertDesc: approvalRequestText || 'Awaiting client approval request.',
+        priorityAction: 'Awaiting client approval response on portal.'
+      };
     }));
 
-    setIsApprovalModalOpen(false);
-    triggerToast("Approval request dispatched to client!");
+    // Trigger toast and notification
+    triggerToast(`Approval request sent to ${activeClient.name}!`);
+    setNotificationsList(prev => [
+      { id: Date.now(), text: `Approval request sent to ${activeClient.name} for: "${approvalRequestText}"`, read: false },
+      ...prev
+    ]);
+
+    setIsApprovalOpen(false);
   };
 
-  // Safe checks for rendering
-  if (!activeClient || !activeClient.id) {
+  if (loading) {
     return (
-      <div className="view" style={{ padding: '24px', color: 'var(--text-secondary)' }}>
-        No active client selected. Please click a roster client.
+      <div className="view" style={{ justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)' }}>
+        <p>Loading client chat...</p>
       </div>
     );
   }
 
-  return (
-    <div className="view" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-      {/* Chat Header */}
-      <div className="chat-header">
-        {loading ? (
-          <div style={{ width: '150px' }}>
-            <div className="db-skeleton-text" style={{ height: '14px', marginBottom: '4px' }}></div>
-            <div className="db-skeleton-text short" style={{ height: '8px' }}></div>
-          </div>
-        ) : (
-          <div>
-            <h2>{activeClient.name}</h2>
-            <div className="chat-sub">
-              <span className={`cdot ${activeClient.statusDot}`} style={{ width: '6px', height: '6px', display: 'inline-block' }}></span>
-              {activeClient.type === 'active' ? 'Active client roster' : 'Pending Intake review'} · {activeClient.alertDesc || 'Synchronized'}
-            </div>
-          </div>
-        )}
+  if (!hasClient) {
+    return (
+      <div className="view" style={{ justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)' }}>
+        <p>Select an active client from the roster to open communication</p>
+      </div>
+    );
+  }
 
+  // Map alert badge to display status color class
+  const getSubStatusColor = (dot) => {
+    if (dot === 'green') return 'var(--green)';
+    if (dot === 'orange' || dot === 'yellow') return 'var(--yellow)';
+    if (dot === 'red') return 'var(--red)';
+    return 'var(--text-secondary)';
+  };
+
+  return (
+    <div className="view" id="view-clients">
+      {/* Chat header */}
+      <div className="chat-header">
+        <div>
+          <h2>{activeClient.name}</h2>
+          <div className="chat-sub">
+            <span
+              style={{
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: getSubStatusColor(activeClient.statusDot),
+                display: 'inline-block',
+              }}
+            ></span>{' '}
+            {activeClient.alertDesc}
+          </div>
+        </div>
         <div className="hbtns">
-          <button className="hbtn" onClick={() => window.open('https://calendly.com', '_blank')}>
+          <button
+            className="hbtn"
+            onClick={() => window.open('https://calendly.com', '_blank')}
+            type="button"
+          >
             <i className="ti ti-calendar"></i> Book a call
           </button>
-          <button className="hbtn hbtn-ghost" onClick={() => triggerToast("Additional options...")}>
+          <button className="hbtn hbtn-ghost" type="button">
             <i className="ti ti-dots"></i>
           </button>
         </div>
       </div>
 
-      {/* Chat messages list area */}
-      <div className="chat-body" style={{ flex: 1, overflowY: 'auto' }}>
-        {loading ? (
-          <>
-            <div className="msg-row" style={{ gap: '8px' }}>
-              <div className="db-skeleton db-skeleton-circle"></div>
-              <div className="db-skeleton" style={{ height: '45px', width: '220px', borderRadius: '10px' }}></div>
-            </div>
-            <div className="msg-row you-row" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-              <div className="db-skeleton" style={{ height: '40px', width: '180px', borderRadius: '10px' }}></div>
-            </div>
-          </>
-        ) : activeClient.chatLog && activeClient.chatLog.length > 0 ? (
-          activeClient.chatLog.map(m => {
-            if (m.sender === 'system') {
+      {/* Chat messages */}
+      <div className="chat-body">
+        {(!activeClient.chatLog || activeClient.chatLog.length === 0) ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '11px' }}>
+            No chat history with {activeClient.name}. Send a message below to start.
+          </div>
+        ) : (
+          activeClient.chatLog.map((msg) => {
+            if (msg.sender === 'agency') {
               return (
-                <div key={m.id} className="system-msg" style={{ margin: '8px 0', textAlign: 'center', fontSize: '10px', color: 'var(--text-secondary)' }}>
-                  {m.text}
+                <div key={msg.id} className="you-row">
+                  <div className="yoububble">
+                    {msg.text}
+                    <div className="mtime" style={{ textAlign: 'right' }}>
+                      {msg.time}
+                    </div>
+                  </div>
+                </div>
+              );
+            } else {
+              return (
+                <div key={msg.id} className="msg-row">
+                  <div className="mavatar">{msg.avatarInitials}</div>
+                  <div className="mbubble">
+                    <div className="mname">{msg.senderName}</div>
+                    {msg.text}
+                    <div className="mtime">{msg.time}</div>
+                  </div>
                 </div>
               );
             }
-            const isYou = m.sender === 'agency';
-            return (
-              <div key={m.id} className={`msg-row ${isYou ? 'you-row' : ''}`} style={isYou ? { display: 'flex', justifyContent: 'flex-end' } : {}}>
-                {!isYou && <div className="mavatar" style={{ marginRight: '8px' }}>{m.avatar}</div>}
-                <div className={isYou ? 'yoububble' : 'mbubble'}>
-                  {!isYou && <div className="mname" style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '2px' }}>{m.senderName}</div>}
-                  <div>{m.text}</div>
-                  <div className="mtime" style={{ fontSize: '8px', color: '#475569', marginTop: '4px', textAlign: isYou ? 'right' : 'left' }}>
-                    {m.time}
-                  </div>
-                </div>
-              </div>
-            );
           })
-        ) : (
-          <div style={{ color: 'var(--text-secondary)', textAlign: 'center', marginTop: '80px', fontSize: '0.8rem' }}>
-            No messages logged with {activeClient.name} yet. Send a text below to initiate communication.
-          </div>
         )}
+        <div ref={chatEndRef} />
       </div>
 
-      {/* "Send Approval Request" Trigger Banner */}
-      {!loading && activeClient.alertBadge === 'ready' && (
+      {/* Approval banner (if not already pending/ready approval or custom choice) */}
+      {activeClient.type === 'active' && activeClient.alertBadge !== 'ready' && (
         <div className="approval-trigger">
           <div className="at-left">
-            <i className="ti ti-circle-check"></i> Project phase is ready. Draft final approval for client signature?
+            <i className="ti ti-circle-check"></i> Ready to send final approval to client?
           </div>
-          <button className="at-btn" onClick={() => setIsApprovalModalOpen(true)}>
+          <button className="at-btn" onClick={handleOpenApprovalModal} type="button">
             Send approval request
           </button>
         </div>
       )}
 
-      {/* Input Message Area */}
-      <div className="input-area">
-        <form onSubmit={handleSendMessage} style={{ display: 'flex', width: '100%', gap: '8px' }}>
-          <input
-            className="cinput"
-            type="text"
-            placeholder={loading ? "Loading chat sync..." : `Type a message to ${activeClient.name}...`}
-            value={chatInputText}
-            onChange={(e) => setChatInputText(e.target.value)}
-            disabled={loading}
-          />
-          <button type="submit" className="sbtn" disabled={loading}>
-            <i className="ti ti-send" style={{ color: '#090d12' }}></i>
-          </button>
-        </form>
-      </div>
+      {/* Chat input form */}
+      <form onSubmit={handleSendMessage} className="input-area">
+        <input
+          className="cinput"
+          placeholder={`Type a message to ${activeClient.name}...`}
+          value={messageInput}
+          onChange={(e) => setMessageInput(e.target.value)}
+        />
+        <button className="sbtn" type="submit">
+          <i className="ti ti-send"></i>
+        </button>
+      </form>
 
-      {/* APPROVAL POPUP MODAL */}
-      {isApprovalModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Send Approval Request</h3>
-            <p>Specify the deliverables being approved. This will lock the brief and notify the client team.</p>
-            
-            <form onSubmit={handleSendApprovalRequest} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input
-                className="modal-input"
-                type="text"
-                placeholder="Deliverables description e.g. Phase 2 Wireframes"
-                value={approvalItem}
-                onChange={(e) => setApprovalItem(e.target.value)}
-                required
-              />
-
-              <div className="modal-price">
-                <span className="mp-label">Locked Price</span>
-                <span className="mp-price">{activeClient.budget || '—'}</span>
+      {/* Approval Modal */}
+      {isApprovalOpen && (
+        <div className="modal-overlay" onClick={() => setIsApprovalOpen(false)}>
+          <form
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={handleSendApproval}
+          >
+            <h3>Send approval request</h3>
+            <p>
+              Client will see a popup asking them to approve or reject. Price is locked once you send — you can't change it after.
+            </p>
+            <input
+              className="modal-input"
+              placeholder="What are you requesting approval for? e.g. Final homepage design"
+              value={approvalRequestText}
+              onChange={(e) => setApprovalRequestText(e.target.value)}
+              required
+            />
+            <div className="modal-price">
+              <div>
+                <div className="mp-label">AGREED PRICE</div>
+                <div className="mp-price">{activeClient.budget}</div>
+                <div className="mp-note">Locked at brief. Cannot be changed.</div>
               </div>
-              
-              <div className="mp-note" style={{ fontSize: '8px', color: 'var(--text-secondary)' }}>
-                Note: ATSYNC collects a 1% platform fee upon clearance of this contract payout.
+              <div style={{ fontSize: '9px', color: '#334155', textAlign: 'right' }}>
+                1% platform fee
+                <br />
+                applied on payment
               </div>
-
-              <div className="modal-btns">
-                <button type="button" className="modal-cancel" onClick={() => setIsApprovalModalOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="modal-send">
-                  <i className="ti ti-send"></i> Send Request
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
+            <div className="modal-btns">
+              <button
+                type="button"
+                className="modal-cancel"
+                onClick={() => setIsApprovalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="modal-send">
+                <i className="ti ti-send"></i> Send to client
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

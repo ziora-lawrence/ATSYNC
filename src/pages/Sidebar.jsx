@@ -1,118 +1,164 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-const Sidebar = ({
-  clients,
+/**
+ * Sidebar navigation component that lists menu sections, active roster clients, and pending intakes.
+ */
+export const Sidebar = ({
+  clients = [],
   activeClientId,
   pendingIntakeCount,
   loading,
   onClientClick,
-  location: _loc // passed from parent but we call useLocation internally
 }) => {
   const location = useLocation();
+  const currentPath = location.pathname;
+
+  const activeClients = clients.filter(c => c.type === 'active');
+  const pendingClients = clients.filter(c => c.type === 'pending');
+
+  const isNavActive = (path) => {
+    if (path === '/dashboard') {
+      return currentPath === '/dashboard';
+    }
+    return currentPath.startsWith(path);
+  };
+
+  const getDotClass = (dot) => {
+    if (dot === 'orange') return 'yellow';
+    return dot || 'gray';
+  };
 
   return (
     <aside className="db-sidebar">
       <div className="sb-category">MENU</div>
-
-      <Link to="/dashboard" className={`sb-item ${location.pathname === '/dashboard' || location.pathname === '/dashboard/' ? 'active' : ''}`}>
+      
+      <Link
+        to="/dashboard"
+        className={`sb-item ${isNavActive('/dashboard') && currentPath === '/dashboard' ? 'active' : ''}`}
+      >
         <div className="sb-item-left">
           <i className="ti ti-layout-dashboard"></i>
-          Dashboard
+          <span>Dashboard</span>
         </div>
       </Link>
 
-      <Link to="/dashboard/clients" className={`sb-item ${location.pathname === '/dashboard/clients' ? 'active' : ''}`}>
+      <Link
+        to="/dashboard/clients"
+        className={`sb-item ${isNavActive('/dashboard/clients') ? 'active' : ''}`}
+      >
         <div className="sb-item-left">
           <i className="ti ti-users"></i>
-          Clients
+          <span>Clients</span>
         </div>
       </Link>
 
-      <Link to="/dashboard/intake" className={`sb-item ${location.pathname === '/dashboard/intake' ? 'active' : ''}`}>
+      <Link
+        to="/dashboard/intake"
+        className={`sb-item ${isNavActive('/dashboard/intake') ? 'active' : ''}`}
+      >
         <div className="sb-item-left">
           <i className="ti ti-link"></i>
-          Intake Links
+          <span>Intake Links</span>
         </div>
-        {loading ? (
-          <span className="db-skeleton" style={{ width: '16px', height: '16px', borderRadius: '4px' }}></span>
-        ) : (
-          <span className="sb-badge-count">{pendingIntakeCount}</span>
+        {pendingClients.length > 0 && (
+          <span className="sb-badge-count">{pendingClients.length}</span>
         )}
       </Link>
 
-      <Link to="/dashboard/bob" className={`sb-item ${location.pathname === '/dashboard/bob' ? 'active' : ''}`}>
+      <Link
+        to="/dashboard/bob"
+        className={`sb-item ${isNavActive('/dashboard/bob') ? 'active' : ''}`}
+      >
         <div className="sb-item-left">
           <i className="ti ti-robot"></i>
-          Bob
+          <span>Bob</span>
         </div>
         <span className="sb-badge-v1">V1</span>
       </Link>
 
-      <Link to="/dashboard/marketplace" className={`sb-item ${location.pathname === '/dashboard/marketplace' ? 'active' : ''}`}>
+      <Link
+        to="/dashboard/marketplace"
+        className={`sb-item ${isNavActive('/dashboard/marketplace') ? 'active' : ''}`}
+      >
         <div className="sb-item-left">
           <i className="ti ti-shopping-bag"></i>
-          Marketplace
+          <span>Marketplace</span>
         </div>
         <span className="sb-badge-v1">V1</span>
       </Link>
 
-      <Link to="/dashboard/settings" className={`sb-item ${location.pathname === '/dashboard/settings' ? 'active' : ''}`}>
+      <Link
+        to="/dashboard/settings"
+        className={`sb-item ${isNavActive('/dashboard/settings') ? 'active' : ''}`}
+      >
         <div className="sb-item-left">
           <i className="ti ti-settings"></i>
-          Settings
+          <span>Settings</span>
         </div>
       </Link>
 
-      {/* ACTIVE ROSTER */}
-      <div className="sb-category">ACTIVE ROSTER</div>
-      {loading ? (
-        <>
-          <div className="sb-item db-skeleton" style={{ margin: '8px 24px', height: '20px', borderRadius: '4px' }}></div>
-          <div className="sb-item db-skeleton" style={{ margin: '8px 24px', height: '20px', borderRadius: '4px' }}></div>
-          <div className="sb-item db-skeleton" style={{ margin: '8px 24px', height: '20px', borderRadius: '4px' }}></div>
-        </>
-      ) : (
-        clients
-          .filter(c => c.type === 'active')
-          .map(c => (
+      {/* Active Roster */}
+      <div className="sb-category" style={{ marginTop: '8px' }}>
+        ACTIVE ROSTER
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {loading ? (
+          <div style={{ padding: '6px 14px', fontSize: '10px', color: 'var(--text-secondary)' }}>
+            Loading roster...
+          </div>
+        ) : activeClients.length === 0 ? (
+          <div style={{ padding: '6px 14px', fontSize: '10px', color: 'var(--text-secondary)' }}>
+            No active clients
+          </div>
+        ) : (
+          activeClients.map((c) => (
             <div
               key={c.id}
-              className={`roster-item ${c.id === activeClientId ? 'active' : ''}`}
+              className={`roster-item ${activeClientId === c.id ? 'active' : ''}`}
               onClick={() => onClientClick(c.id)}
             >
-              <div className="sb-item-left">
-                <span className={`roster-dot ${c.statusDot}`}></span>
-                {c.name}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <span className={`roster-dot ${getDotClass(c.statusDot)}`}></span>
+                <span>{c.name}</span>
               </div>
-              {c.id === activeClientId && <span className="roster-arrow">&gt;</span>}
+              {activeClientId === c.id && (
+                <i className="ti ti-chevron-right roster-arrow"></i>
+              )}
             </div>
           ))
-      )}
+        )}
+      </div>
 
-      {/* PENDING INTAKE */}
-      <div className="sb-category">PENDING INTAKE</div>
-      {loading ? (
-        <>
-          <div className="sb-item db-skeleton" style={{ margin: '8px 24px', height: '20px', borderRadius: '4px' }}></div>
-          <div className="sb-item db-skeleton" style={{ margin: '8px 24px', height: '20px', borderRadius: '4px' }}></div>
-        </>
-      ) : (
-        clients
-          .filter(c => c.type === 'pending')
-          .map(c => (
+      {/* Pending Intake */}
+      <div className="sb-category" style={{ marginTop: '6px' }}>
+        PENDING INTAKE
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {loading ? (
+          <div style={{ padding: '5px 14px', fontSize: '10px', color: 'var(--text-secondary)' }}>
+            Loading pending...
+          </div>
+        ) : pendingClients.length === 0 ? (
+          <div style={{ padding: '5px 14px', fontSize: '10px', color: 'var(--text-secondary)' }}>
+            No pending intake
+          </div>
+        ) : (
+          pendingClients.map((c) => (
             <div
               key={c.id}
-              className={`roster-item ${c.id === activeClientId ? 'active' : ''}`}
+              className="roster-item"
               onClick={() => onClientClick(c.id)}
+              style={{ padding: '5px 14px', fontSize: '10px' }}
             >
-              <div className="sb-item-left">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <span className="roster-dot gray"></span>
-                {c.name}
+                <span style={{ color: 'var(--text-secondary)' }}>{c.name}</span>
               </div>
             </div>
           ))
-      )}
+        )}
+      </div>
     </aside>
   );
 };
