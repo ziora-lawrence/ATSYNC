@@ -3,6 +3,7 @@ import {Routes, Route} from 'react-router-dom'
 import Landingpage from './pages/landingpage'
 import Agentonboard from './pages/agentonboard'
 import Dashboard from './pages/dashboard'
+import ResetPassword from './pages/resetpassword'
 import { supabase } from './lib/supabase'
 
 const App = () => {
@@ -54,6 +55,7 @@ const App = () => {
         <Route path='/' element={<Landingpage/>}/>
         <Route path='/agent-onboard' element={<Agentonboard/>}/>
         <Route path='/dashboard' element={<Dashboard/>}/>
+        <Route path='/reset' element={<ResetPassword/>}/>
       </Routes>
     </>
   )

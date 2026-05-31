@@ -137,6 +137,9 @@ const Landingpage = () => {
   const [wait, setWait] = useState("");
   const [isWaitlistLoading, setIsWaitlistLoading] = useState(false);
   const [isWaitlistJoined, setIsWaitlistJoined] = useState(false);
+  const [isForgotMode, setIsForgotMode] = useState(false);
+  const [forgotEmailSent, setForgotEmailSent] = useState(false);
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
 
   const [stats, setStats] = useState({ agencies: 0, speed: 0, chaos: 0 });
   const statsRef = useRef(null);
@@ -293,6 +296,36 @@ const Landingpage = () => {
     }
   };
 
+  const handleForgotSubmit = async () => {
+    if (!agencyEmail.trim()) return seterror("Email cannot be empty");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(agencyEmail)) return seterror("Please enter a valid email address");
+
+    setIsForgotLoading(true);
+    seterror("");
+
+    try {
+      const res = await fetch("https://atsync-backend-vdko.onrender.com/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: agencyEmail.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setForgotEmailSent(true);
+      } else {
+        seterror(data.message || "Failed to send reset link");
+      }
+    } catch (err) {
+      console.error(err);
+      seterror("Network error. Please try again later.");
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
+
   // ── Waitlist via Supabase ──
   const handleWaitlistSubmit = async (e) => {
     e.preventDefault();
@@ -337,89 +370,158 @@ const Landingpage = () => {
       <Nav setShowLogin={setShowLogin} setShowWaitlist={setShowWaitlist} />
 
       {showLogin && (
-        <div className="modal-overlay" onClick={() => setShowLogin(false)}>
+        <div className="modal-overlay" onClick={() => { setShowLogin(false); setIsForgotMode(false); setForgotEmailSent(false); seterror(""); }}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowLogin(false)}>
+            <button className="modal-close" onClick={() => { setShowLogin(false); setIsForgotMode(false); setForgotEmailSent(false); seterror(""); }}>
               ✕
             </button>
 
-            <h2>{isLogin ? "Welcome Back" : "Create Your Account"}</h2>
-            <p className="modal-subtitle">
-              {isLogin
-                ? "Log in to your ATSYNC dashboard"
-                : "Start managing clients the smart way"}
-            </p>
+            {isForgotMode ? (
+              forgotEmailSent ? (
+                <div className="waitlist-success" style={{ textAlign: "center", padding: "20px 0" }}>
+                  <div className="success-icon" style={{ fontSize: "50px", marginBottom: "20px" }}>✉️</div>
+                  <h2>Reset Link Sent!</h2>
+                  <p className="modal-subtitle">We've sent a professional password reset link to your email. Please check your inbox (and spam folder).</p>
+                  <button 
+                    className="modal-submit" 
+                    onClick={() => { setIsForgotMode(false); setForgotEmailSent(false); seterror(""); }} 
+                    style={{ marginTop: "20px" }}
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h2>Reset Password</h2>
+                  <p className="modal-subtitle">
+                    Enter your email to receive a password reset link.
+                  </p>
 
-            {!isLogin && (
-              <input
-                value={agencyName}
-                onChange={(e) => setagencyName(e.target.value)}
-                type="text"
-                placeholder="Agency Name"
-                className="modal-input"
-              />
-            )}
-            <input
-              value={agencyEmail}
-              onChange={(e) => setagencyEmail(e.target.value)}
-              type="email"
-              placeholder="Email"
-              className="modal-input"
-            />
-            <div className="password-input-container">
-              <input
-                value={agencyPass}
-                onChange={(e) => setagencyPass(e.target.value)}
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                className="modal-input"
-              />
-              <span
-                className="eye-icon"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? "🙈" : "👁️"}
-              </span>
-            </div>
-            {!isLogin && (
-              <div className="password-input-container">
+                  <input
+                    value={agencyEmail}
+                    onChange={(e) => setagencyEmail(e.target.value)}
+                    type="email"
+                    placeholder="Email"
+                    className="modal-input"
+                  />
+
+                  {error && (
+                    <p
+                      className="error-message"
+                      style={{ color: "red", fontSize: "14px", marginBottom: "10px" }}
+                    >
+                      {error}
+                    </p>
+                  )}
+
+                  <button 
+                    className="modal-submit" 
+                    onClick={handleForgotSubmit}
+                    disabled={isForgotLoading}
+                  >
+                    {isForgotLoading ? "Sending..." : "Send Reset Link"}
+                  </button>
+
+                  <p className="modal-toggle">
+                    Remembered your password?{" "}
+                    <span onClick={() => { setIsForgotMode(false); seterror(""); }}>
+                      Login
+                    </span>
+                  </p>
+                </>
+              )
+            ) : (
+              <>
+                <h2>{isLogin ? "Welcome Back" : "Create Your Account"}</h2>
+                <p className="modal-subtitle">
+                  {isLogin
+                    ? "Log in to your ATSYNC dashboard"
+                    : "Start managing clients the smart way"}
+                </p>
+
+                {!isLogin && (
+                  <input
+                    value={agencyName}
+                    onChange={(e) => setagencyName(e.target.value)}
+                    type="text"
+                    placeholder="Agency Name"
+                    className="modal-input"
+                  />
+                )}
                 <input
-                  value={agencyConPass}
-                  onChange={(e) => setagencyConPass(e.target.value)}
-                  type={showConPassword ? "text" : "password"}
-                  placeholder="Confirm Password"
+                  value={agencyEmail}
+                  onChange={(e) => setagencyEmail(e.target.value)}
+                  type="email"
+                  placeholder="Email"
                   className="modal-input"
                 />
-                <span
-                  className="eye-icon"
-                  onClick={() => setShowConPassword(!showConPassword)}
-                >
-                  {showConPassword ? "🙈" : "👁️"}
-                </span>
-              </div>
+                <div className="password-input-container">
+                  <input
+                    value={agencyPass}
+                    onChange={(e) => setagencyPass(e.target.value)}
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    className="modal-input"
+                  />
+                  <span
+                    className="eye-icon"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? "🙈" : "👁️"}
+                  </span>
+                </div>
+                {!isLogin && (
+                  <div className="password-input-container">
+                    <input
+                      value={agencyConPass}
+                      onChange={(e) => setagencyConPass(e.target.value)}
+                      type={showConPassword ? "text" : "password"}
+                      placeholder="Confirm Password"
+                      className="modal-input"
+                    />
+                    <span
+                      className="eye-icon"
+                      onClick={() => setShowConPassword(!showConPassword)}
+                    >
+                      {showConPassword ? "🙈" : "👁️"}
+                    </span>
+                  </div>
+                )}
+
+                {isLogin && (
+                  <div className="forgot-password-link-container" style={{ textAlign: "right", marginTop: "5px", marginBottom: "15px" }}>
+                    <span 
+                      onClick={() => { setIsForgotMode(true); seterror(""); }} 
+                      style={{ color: "#00e5ff", cursor: "pointer", fontSize: "14px", fontWeight: "500", textDecoration: "none" }}
+                    >
+                      Forgot Password?
+                    </span>
+                  </div>
+                )}
+
+                {error && (
+                  <p
+                    className="error-message"
+                    style={{ color: "red", fontSize: "14px", marginBottom: "10px" }}
+                  >
+                    {error}
+                  </p>
+                )}
+
+                <button className="modal-submit" onClick={handleSubmit}>
+                  {isLogin ? "Login" : "Create Account"}
+                </button>
+
+                <p className="modal-toggle">
+                  {isLogin
+                    ? "Don't have an account? "
+                    : "Already have an account? "}
+                  <span onClick={() => { setIsLogin(!isLogin); seterror(""); }}>
+                    {isLogin ? "Sign up" : "Login"}
+                  </span>
+                </p>
+              </>
             )}
-
-            {error && (
-              <p
-                className="error-message"
-                style={{ color: "red", fontSize: "14px", marginBottom: "10px" }}
-              >
-                {error}
-              </p>
-            )}
-
-            <button className="modal-submit" onClick={handleSubmit}>
-              {isLogin ? "Login" : "Create Account"}
-            </button>
-
-            <p className="modal-toggle">
-              {isLogin
-                ? "Don't have an account? "
-                : "Already have an account? "}
-              <span onClick={() => setIsLogin(!isLogin)}>
-                {isLogin ? "Sign up" : "Login"}
-              </span>
-            </p>
           </div>
         </div>
       )}
