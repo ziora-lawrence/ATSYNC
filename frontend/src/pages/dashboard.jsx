@@ -1,90 +1,42 @@
-import React, { useEffect, useState } from 'react';
-import './dashboard.css';
-import Nav from '../nav/nav';
-import { supabase } from '../lib/supabase';
+import React from 'react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 
-const Dashboard = () => {
-  const [stats, setStats] = useState({ waitlist: 0, profiles: 0, speed: 3, chaos: 100 });
-  const [chartData, setChartData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+/**
+ * Dashboard page – renders the main overview with statistics and active alerts.
+ * Uses the context provided by DashboardLayout.
+ */
+export const Dashboard = () => {
+  const navigate = useNavigate();
+  const {
+    clients = [],
+    activeClientsCount = 0,
+    pendingIntakeCount = 0,
+    openApprovalsCount = 0,
+    scopeFlagsCount = 0,
+    setActiveClientId,
+    loading,
+  } = useOutletContext();
 
-  // Animated counter helper
-  const animateValue = (start, end, duration, callback) => {
-    const startTime = Date.now();
-    const step = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      callback(Math.floor(start + progress * (end - start)));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
+  const activeClients = clients.filter(c => c.type === 'active');
+
+  const getAlertBadgeClass = (badge) => {
+    if (badge === 'warning') return 'urgent';
+    if (badge === 'overdue') return 'overdue';
+    if (badge === 'ready') return 'ready';
+    return 'pending';
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Get current user
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        setUser(currentUser);
+  const getAlertBadgeLabel = (badge) => {
+    if (badge === 'warning') return 'Urgent';
+    if (badge === 'overdue') return 'Overdue';
+    if (badge === 'ready') return 'Ready';
+    return 'Pending';
+  };
 
-        // 1. Waitlist count
-        const { count: waitlistCount } = await supabase
-          .from('waitlist')
-          .select('*', { count: 'exact', head: true });
-
-        // 2. Agent profiles count
-        const { count: profilesCount } = await supabase
-          .from('agent_profiles')
-          .select('*', { count: 'exact', head: true });
-
-        // 3. Monthly waitlist signups for chart (last 6 months)
-        const months = [];
-        for (let i = 5; i >= 0; i--) {
-          const d = new Date();
-          d.setMonth(d.getMonth() - i);
-          months.push({
-            label: d.toLocaleString('default', { month: 'short' }),
-            year: d.getFullYear(),
-            month: d.getMonth() + 1,
-          });
-        }
-
-        const chartResults = await Promise.all(
-          months.map(async ({ label, year, month }) => {
-            const from = `${year}-${String(month).padStart(2, '0')}-01`;
-            const toDate = new Date(year, month, 1);
-            const to = `${toDate.getFullYear()}-${String(toDate.getMonth() + 1).padStart(2, '0')}-01`;
-
-            const { count } = await supabase
-              .from('waitlist')
-              .select('*', { count: 'exact', head: true })
-              .gte('created_at', from)
-              .lt('created_at', to);
-
-            return { label, value: count || 0 };
-          })
-        );
-
-        setChartData(chartResults);
-
-        // Animate stats
-        const wl = waitlistCount || 0;
-        const pr = profilesCount || 0;
-        animateValue(0, wl, 1500, (v) => setStats(s => ({ ...s, waitlist: v })));
-        animateValue(0, pr, 1500, (v) => setStats(s => ({ ...s, profiles: v })));
-        animateValue(0, 3, 1500, (v) => setStats(s => ({ ...s, speed: v })));
-        animateValue(0, 100, 1500, (v) => setStats(s => ({ ...s, chaos: v })));
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const handleAlertClick = (clientId) => {
+    setActiveClientId(clientId);
+    navigate('/dashboard/clients');
+  };
 
   const agencyName = (() => {
     try {
@@ -94,67 +46,74 @@ const Dashboard = () => {
     }
   })();
 
-  const maxChartValue = Math.max(...chartData.map(d => d.value), 1);
-
   return (
-    <div className="dashboard-page">
-      <Nav />
+    <div className="db-middle-panel" style={{ padding: '16px' }}>
+      <div className="db-header">
+        <h1>Welcome back{agencyName !== 'your agency' ? `, ${agencyName}` : ''}! 👋</h1>
+        <p>Your agency overview</p>
+      </div>
 
-      <section className="dashboard-header">
-        <h1>
-          {loading ? 'Loading…' : `Welcome back${agencyName !== 'your agency' ? `, ${agencyName}` : ''}! 👋`}
-        </h1>
-        <p>Real‑time overview of your ATSYNC ecosystem.</p>
-      </section>
-
-      <section className="stats-grid">
-        <div className="stat-card glassmorphism">
-          <h3>
-            {stats.waitlist}+
-            <span className="stat-label">On the Waitlist</span>
-          </h3>
+      {loading ? (
+        <div className="db-stats-grid" style={{ opacity: 0.5 }}>
+          <div className="stat-card"><div className="stat-card-label">LOADING STATS...</div></div>
+          <div className="stat-card"><div className="stat-card-label">LOADING STATS...</div></div>
+          <div className="stat-card"><div className="stat-card-label">LOADING STATS...</div></div>
+          <div className="stat-card"><div className="stat-card-label">LOADING STATS...</div></div>
         </div>
-        <div className="stat-card glassmorphism">
-          <h3>
-            {stats.profiles}
-            <span className="stat-label">Agencies Onboarded</span>
-          </h3>
-        </div>
-        <div className="stat-card glassmorphism">
-          <h3>
-            {stats.speed}x
-            <span className="stat-label">Faster Onboarding</span>
-          </h3>
-        </div>
-        <div className="stat-card glassmorphism">
-          <h3>
-            {stats.chaos}%
-            <span className="stat-label">WhatsApp Chaos Eliminated</span>
-          </h3>
-        </div>
-      </section>
-
-      <section className="chart-section glassmorphism">
-        <h2>Monthly Waitlist Sign‑ups</h2>
-        {loading ? (
-          <p style={{ color: '#aaa', textAlign: 'center', padding: '40px 0' }}>Fetching data…</p>
-        ) : (
-          <div className="bar-chart">
-            {chartData.map((item, idx) => (
-              <div
-                className="bar"
-                key={idx}
-                style={{ '--value': Math.round((item.value / maxChartValue) * 100) }}
-              >
-                <span className="bar-label">{item.label}</span>
-                <span className="bar-value">{item.value}</span>
-              </div>
-            ))}
+      ) : (
+        <div className="db-stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-label">ACTIVE CLIENTS</div>
+            <div className="stat-card-value">{activeClientsCount}</div>
+            <div className="stat-card-subtext">+1 this month</div>
           </div>
-        )}
-      </section>
+          <div className="stat-card">
+            <div className="stat-card-label">PENDING INTAKE</div>
+            <div className="stat-card-value">{pendingIntakeCount}</div>
+            <div className="stat-card-subtext">Awaiting review</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-label">OPEN APPROVALS</div>
+            <div className="stat-card-value">{openApprovalsCount}</div>
+            <div className="stat-card-subtext">Quantum Logic</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-label">SCOPE FLAGS</div>
+            <div className="stat-card-value red">{scopeFlagsCount}</div>
+            <div className="stat-card-subtext">This week</div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginTop: '20px' }}>
+        <div className="alerts-section-title">ALERTS</div>
+        <div className="alerts-list">
+          {loading ? (
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Loading alerts...</div>
+          ) : activeClients.length === 0 ? (
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No active client alerts</div>
+          ) : (
+            activeClients.map((client) => (
+              <div
+                key={client.id}
+                className="alert-row"
+                onClick={() => handleAlertClick(client.id)}
+              >
+                <div className="alert-info">
+                  <div className="alert-company">{client.name}</div>
+                  <div className="alert-desc">{client.alertDesc || 'All clear'}</div>
+                </div>
+                <span className={`alert-badge ${getAlertBadgeClass(client.alertBadge)}`}>
+                  {getAlertBadgeLabel(client.alertBadge)}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
 export default Dashboard;
+
