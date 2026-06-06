@@ -1,0 +1,3 @@
+[submodule "frontend/ATSYNC/backend"]
+	path = frontend/ATSYNC/backend
+	url = https://github.com/Simisola16/atsync-backend.git
