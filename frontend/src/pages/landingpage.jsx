@@ -174,6 +174,8 @@ const Landingpage = () => {
   const [isForgotMode, setIsForgotMode] = useState(false);
   const [forgotEmailSent, setForgotEmailSent] = useState(false);
   const [isForgotLoading, setIsForgotLoading] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   const [stats, setStats] = useState({ agencies: 0, speed: 0, chaos: 0 });
   const statsRef = useRef(null);
@@ -181,8 +183,35 @@ const Landingpage = () => {
   const [headline, setHeadline] = useState("");
   const fullHeadline = "Focus on Creating Leave the rest to Bob";
 
+  const navigate = useNavigate();
+
+  // ── Session persistence check on load ──
+  // If user is already logged in, send them straight to dashboard
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/dashboard");
+      } else {
+        setSessionChecked(true);
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
+  // ── Listen for auth state changes (handles tab switching, token refresh etc) ──
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        navigate("/dashboard");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   // ── Scroll entrance animations ──
   useEffect(() => {
+    if (!sessionChecked) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -194,7 +223,7 @@ const Landingpage = () => {
     const els = document.querySelectorAll(".animate-on-scroll");
     els.forEach((el) => observer.observe(el));
     return () => els.forEach((el) => observer.unobserve(el));
-  }, []);
+  }, [sessionChecked]);
 
   // ── Stats counter animation ──
   useEffect(() => {
@@ -240,73 +269,86 @@ const Landingpage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const navigate = useNavigate();
+  // ── Auth Handlers (all Supabase) ──
 
-  // ── Handlers ──
   const handleSubmit = async () => {
+    seterror("");
+    setIsAuthLoading(true);
+
     if (!isLogin) {
-      if (!agencyName.trim()) return seterror("Agency name cannot be empty");
-      if (!agencyEmail.trim()) return seterror("Email cannot be empty");
-      if (!agencyPass.trim()) return seterror("Password cannot be empty");
-      if (!agencyConPass.trim()) return seterror("Confirm Password cannot be empty");
-      if (agencyPass !== agencyConPass) return seterror("Passwords must match");
+      // ── REGISTER ──
+      if (!agencyName.trim()) { seterror("Agency name cannot be empty"); setIsAuthLoading(false); return; }
+      if (!agencyEmail.trim()) { seterror("Email cannot be empty"); setIsAuthLoading(false); return; }
+      if (!agencyPass.trim()) { seterror("Password cannot be empty"); setIsAuthLoading(false); return; }
+      if (!agencyConPass.trim()) { seterror("Confirm Password cannot be empty"); setIsAuthLoading(false); return; }
+      if (agencyPass !== agencyConPass) { seterror("Passwords must match"); setIsAuthLoading(false); return; }
+      if (agencyPass.length < 6) { seterror("Password must be at least 6 characters"); setIsAuthLoading(false); return; }
 
       try {
-        const res = await fetch("https://atsync-backend-vdko.onrender.com/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            agencyName: agencyName.trim(),
-            email: agencyEmail.trim(),
-            password: agencyPass.trim(),
-          }),
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: agencyEmail.trim(),
+          password: agencyPass.trim(),
+          options: {
+            data: { agency_name: agencyName.trim() },
+          },
         });
-        const data = await res.json();
-        if (res.ok) {
+
+        if (signUpError) {
+          seterror(signUpError.message || "Registration failed");
+        } else {
           seterror("");
           setIsLogin(true);
           setagencyPass("");
           setagencyConPass("");
-          alert(data.message || "Account created! Please check your email to verify.");
-        } else {
-          seterror(data.message || "Registration failed");
+          // Show success message inline instead of alert
+          seterror("✅ Account created! Check your email to verify before logging in.");
         }
       } catch {
         seterror("Network error. Please try again later.");
       }
+
     } else {
-      if (!agencyEmail.trim()) return seterror("Email cannot be empty");
-      if (!agencyPass.trim()) return seterror("Password cannot be empty");
+      // ── LOGIN ──
+      if (!agencyEmail.trim()) { seterror("Email cannot be empty"); setIsAuthLoading(false); return; }
+      if (!agencyPass.trim()) { seterror("Password cannot be empty"); setIsAuthLoading(false); return; }
 
       try {
-        const res = await fetch("https://atsync-backend-vdko.onrender.com/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: agencyEmail.trim(),
-            password: agencyPass.trim(),
-          }),
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: agencyEmail.trim(),
+          password: agencyPass.trim(),
         });
-        const data = await res.json();
-        if (res.ok) {
-          localStorage.setItem("atsync_token", data.token);
-          localStorage.setItem(
-            "atsync_user",
-            JSON.stringify({ email: data.email, agencyName: data.agencyName })
-          );
+
+        if (signInError) {
+          seterror(signInError.message || "Invalid credentials");
+        } else if (data.session) {
+          // Check if user has completed onboarding
+          const { data: profile } = await supabase
+            .from("agent_profiles")
+            .select("user_id")
+            .eq("user_id", data.user.id)
+            .single();
+
           seterror("");
           setShowLogin(false);
           window.scrollTo(0, 0);
-          navigate("/agent-onboard");
-        } else {
-          seterror(data.message || "Invalid credentials");
+
+          if (profile) {
+            // Returning user — already onboarded, go straight to dashboard
+            navigate("/dashboard");
+          } else {
+            // New user — needs to complete onboarding first
+            navigate("/agent-onboard");
+          }
         }
       } catch {
         seterror("Network error. Please try again later.");
       }
     }
+
+    setIsAuthLoading(false);
   };
 
+  // ── FORGOT PASSWORD ──
   const handleForgotSubmit = async () => {
     if (!agencyEmail.trim()) return seterror("Email cannot be empty");
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -316,16 +358,15 @@ const Landingpage = () => {
     seterror("");
 
     try {
-      const res = await fetch("https://atsync-backend-vdko.onrender.com/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: agencyEmail.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setForgotEmailSent(true);
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        agencyEmail.trim(),
+        { redirectTo: `${window.location.origin}/reset` }
+      );
+
+      if (resetError) {
+        seterror(resetError.message || "Failed to send reset link");
       } else {
-        seterror(data.message || "Failed to send reset link");
+        setForgotEmailSent(true);
       }
     } catch {
       seterror("Network error. Please try again later.");
@@ -334,6 +375,7 @@ const Landingpage = () => {
     }
   };
 
+  // ── WAITLIST ──
   const handleWaitlistSubmit = async (e) => {
     e.preventDefault();
     if (!wait.trim()) return seterror("Email cannot be empty");
@@ -364,6 +406,10 @@ const Landingpage = () => {
       setIsWaitlistLoading(false);
     }
   };
+
+  // Don't render landing page until we've confirmed no active session
+  // (prevents flash of landing page before redirect)
+  if (!sessionChecked) return null;
 
   /* ─── RENDER ─── */
   return (
@@ -511,9 +557,13 @@ const Landingpage = () => {
                   </div>
                 )}
 
-                {error && <p className="error-message">{error}</p>}
-                <button className="modal-submit" onClick={handleSubmit}>
-                  {isLogin ? "Login" : "Create Account"}
+                {error && (
+                  <p className={`error-message ${error.startsWith("✅") ? "success-message" : ""}`}>
+                    {error}
+                  </p>
+                )}
+                <button className="modal-submit" onClick={handleSubmit} disabled={isAuthLoading}>
+                  {isAuthLoading ? "Please wait..." : isLogin ? "Login" : "Create Account"}
                 </button>
                 <p className="modal-toggle">
                   {isLogin ? "Don't have an account? " : "Already have an account? "}
