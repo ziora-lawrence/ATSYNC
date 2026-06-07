@@ -12,6 +12,7 @@ export const RightPanel = ({
   onApproveIntake,
   onToggleBriefLock,
   onAddPhase,
+  setRightPanelOpen,
 }) => {
   const hasClient = activeClient && activeClient.id;
 
@@ -53,6 +54,10 @@ export const RightPanel = ({
           Timeline
         </div>
         <div className="ut dim">Bob</div>
+        {/* Mobile close button for right panel */}
+        <button className="col-right-close" onClick={() => setRightPanelOpen(false)} title="Close panel">
+          <i className="ti ti-x"></i>
+        </button>
       </div>
 
       {/* Tab body */}
