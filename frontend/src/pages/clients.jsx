@@ -240,15 +240,77 @@ export const Clients = () => {
 
   return (
     <div className="view" id="view-clients">
+
+      {/* ── CLIENTS HEADER (always visible above panels) ── */}
+      <div className="clients-header">
+        <div className="chat-top-left">
+          {/* Roster Toggle (left panel) */}
+          <div
+            className="list-tog"
+            onClick={() => {
+              const nextState = !colListCollapsed;
+              setColListCollapsed(nextState);
+              if (!nextState) setRightPanelOpen(false);
+            }}
+            title="Toggle client roster"
+          >
+            <i className="ti ti-users"></i>
+          </div>
+
+          {hasClient ? (
+            <div>
+              <div className="chat-cname">{activeClient.name}</div>
+              <div className="chat-csub">
+                {activeClient.service} · {activeClient.timeline?.find(t => t.active)?.title || 'Onboarding'} · Deadline: {activeClient.deadline}
+              </div>
+            </div>
+          ) : (
+            <div className="chat-cname">Select a Client</div>
+          )}
+        </div>
+
+        <div className="chat-actions">
+          {hasClient && (
+            <>
+              <button
+                className="btn-outline danger"
+                onClick={() => triggerToast('Logged change request scope flag.')}
+              >
+                <i className="ti ti-edit"></i> Request changes
+              </button>
+              <button
+                className="btn-outline"
+                onClick={() => window.open('https://calendly.com', '_blank')}
+              >
+                <i className="ti ti-phone"></i> Book call
+              </button>
+            </>
+          )}
+
+          {/* Utilities Panel Toggle (right panel) */}
+          <div
+            className="list-tog"
+            onClick={() => {
+              const nextState = !rightPanelOpen;
+              setRightPanelOpen(nextState);
+              if (nextState) setColListCollapsed(true);
+            }}
+            title="Toggle utilities panel"
+          >
+            <i className="ti ti-info-circle"></i>
+          </div>
+        </div>
+      </div>
+
+      {/* ── WORKSPACE (panels overlay only this area) ── */}
       <div className="workspace">
-        
-        {/* COLUMN 1: CLIENTS LIST */}
+
+        {/* COLUMN 1: CLIENTS ROSTER */}
         <div className={`col-list ${colListCollapsed ? 'collapsed' : ''}`} id="col-list">
           <div className="col-list-head">
             <button className="add-cl-btn" onClick={() => { setIsModalOpen(true); setModalMethod('link'); }}>
               <i className="ti ti-plus"></i> Add client
             </button>
-            {/* Mobile close button for client roster */}
             <button className="col-list-close" onClick={() => setColListCollapsed(true)} title="Close roster">
               <i className="ti ti-x"></i>
             </button>
@@ -271,8 +333,8 @@ export const Clients = () => {
           <div className="intake-sec">
             <div className="intake-lbl">Pending intake</div>
             {pendingRoster.map((c) => (
-              <div 
-                key={c.id} 
+              <div
+                key={c.id}
                 className={`cl-item ${activeClient.id === c.id ? 'active' : ''}`}
                 onClick={() => {
                   setActiveClientId(c.id);
@@ -287,85 +349,9 @@ export const Clients = () => {
           </div>
         </div>
 
-        {/* Mobile workspace backdrop under the header for tap-to-close behavior */}
-        {isMobile() && (!colListCollapsed || rightPanelOpen) && (
-          <div
-            className="workspace-backdrop"
-            onClick={() => {
-              setColListCollapsed(true);
-              setRightPanelOpen(false);
-            }}
-          />
-        )}
-
-        {/* COLUMN 2: CHAT AREA */}
+        {/* COLUMN 2: CHAT BODY */}
         <div className="col-chat">
-          {/* Chat Header */}
-          <div className="chat-top">
-            <div className="chat-top-left">
-              {/* Roster Toggle */}
-              <div 
-                className="list-tog" 
-                onClick={() => {
-                  const nextState = !colListCollapsed;
-                  setColListCollapsed(nextState);
-                  if (!nextState) {
-                    setRightPanelOpen(false); // Close right panel if opening client list
-                  }
-                }} 
-                title="Toggle client roster"
-              >
-                <i className="ti ti-users"></i>
-              </div>
-
-              {hasClient ? (
-                <div>
-                  <div className="chat-cname">{activeClient.name}</div>
-                  <div className="chat-csub">
-                    {activeClient.service} · {activeClient.timeline?.find(t => t.active)?.title || 'Onboarding'} · Deadline: {activeClient.deadline}
-                  </div>
-                </div>
-              ) : (
-                <div className="chat-cname">Select a Client</div>
-              )}
-            </div>
-            
-            <div className="chat-actions">
-              {hasClient && (
-                <>
-                  <button 
-                    className="btn-outline danger" 
-                    onClick={() => triggerToast('Logged change request scope flag.')}
-                  >
-                    <i className="ti ti-edit"></i> Request changes
-                  </button>
-                  <button 
-                    className="btn-outline" 
-                    onClick={() => window.open('https://calendly.com', '_blank')}
-                  >
-                    <i className="ti ti-phone"></i> Book call
-                  </button>
-                </>
-              )}
-              
-              {/* Utilities Panel Toggle */}
-              <div 
-                className="list-tog" 
-                onClick={() => {
-                  const nextState = !rightPanelOpen;
-                  setRightPanelOpen(nextState);
-                  if (nextState) {
-                    setColListCollapsed(true); // Close client list if opening right panel
-                  }
-                }} 
-                title="Toggle utilities panel"
-              >
-                <i className="ti ti-info-circle"></i>
-              </div>
-            </div>
-          </div>
-
-          {/* Chat Approval Ribbon */}
+          {/* Approval Ribbon */}
           {hasClient && activeClient.type === 'active' && activeClient.alertBadge === 'ready' && (
             <div className="appr-ribbon">
               <div>

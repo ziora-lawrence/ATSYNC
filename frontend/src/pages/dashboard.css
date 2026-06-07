@@ -445,7 +445,7 @@ body:has(.shell) {
 #view-clients {
   padding: 0;
   overflow: hidden;
-  height: 100%;
+  /* flex: 1 from .view handles height — no height: 100% needed */
 }
 
 /* ── SHARED COMPONENTS ── */
@@ -784,10 +784,26 @@ body:has(.shell) {
 }
 
 /* ── CLIENTS VIEW & WORKSPACE ── */
+
+/* Clients header: always rendered above workspace, never covered by panels */
+.clients-header {
+  background: var(--bg-sub);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 5;
+  position: relative;
+}
+
 .workspace {
   display: flex;
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   position: relative;
   overflow: hidden;
 }
@@ -902,7 +918,7 @@ body:has(.shell) {
   margin-left: auto;
 }
 
-/* Chat Center */
+/* Chat Center (body only — header is now .clients-header above workspace) */
 .col-chat {
   flex: 1;
   display: flex;
@@ -910,19 +926,6 @@ body:has(.shell) {
   background: var(--bg);
   min-width: 0;
   position: relative;
-}
-.chat-top {
-  background: var(--bg-sub);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-shrink: 0;
-  /* Must be above overlay panels on mobile */
-  position: relative;
-  z-index: 25;
 }
 .chat-top-left {
   display: flex;
@@ -2646,17 +2649,6 @@ body:has(.shell) {
 
 
 
-  /* Workspace backdrop under the header for tap-to-close behavior */
-  .workspace-backdrop {
-    display: block;
-    position: absolute;
-    inset: 58px 0 0 0; /* starts below header */
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(2px);
-    z-index: 15;
-    animation: fadeInBackdrop 0.2s ease;
-  }
-
   /* ── Topbar ── */
   .tb-title {
     font-size: 14px;
@@ -2687,15 +2679,15 @@ body:has(.shell) {
     z-index: 1;
   }
 
-  /* Client roster slides in from the left as an overlay under the header */
+  /* Client roster slides in from the left as an overlay */
   .col-list {
     position: absolute !important;
     left: 0;
-    top: 58px !important;
+    top: 0 !important;
     bottom: 0;
     width: 280px !important;
     max-height: none !important;
-    height: calc(100% - 58px) !important;
+    height: 100% !important;
     transform: translateX(0);
     transition: transform 0.26s cubic-bezier(.4,0,.2,1), opacity 0.2s;
     z-index: 20;
@@ -2712,15 +2704,15 @@ body:has(.shell) {
     max-height: none !important;
   }
 
-  /* Right panel slides in from the right as an overlay under the header */
+  /* Right panel slides in from the right as an overlay */
   .col-right {
     position: absolute !important;
     right: 0;
-    top: 58px !important;
+    top: 0 !important;
     bottom: 0;
     width: 290px !important;
     max-height: none !important;
-    height: calc(100% - 58px) !important;
+    height: 100% !important;
     transform: translateX(0);
     transition: transform 0.26s cubic-bezier(.4,0,.2,1), opacity 0.2s;
     z-index: 20;
@@ -2742,12 +2734,12 @@ body:has(.shell) {
     display: flex;
   }
 
-  /* Hide text action buttons in chat header on mobile to keep toggle icons accessible */
+  /* Hide text action buttons in clients header on mobile, keep toggle icons */
   .chat-actions .btn-outline {
     display: none;
   }
 
-  /* Make chat header toggle buttons more prominent on mobile */
+  /* Make toggle buttons more prominent on mobile */
   .list-tog {
     width: 38px;
     height: 38px;
@@ -2755,15 +2747,11 @@ body:has(.shell) {
     background: rgba(255,255,255,0.04);
   }
 
-  /* Ensure chat-top doesn't overflow and floats on top of panels */
-  .chat-top {
-    height: 58px !important;
-    padding: 0 12px !important;
-    gap: 8px;
-    position: relative;
-    z-index: 25;
-    background: var(--bg-sub);
-    box-sizing: border-box;
+  /* Clients header on mobile */
+  .clients-header {
+    padding: 0 12px;
+    height: 54px;
+    flex-shrink: 0;
   }
   .chat-cname {
     font-size: 13px;
