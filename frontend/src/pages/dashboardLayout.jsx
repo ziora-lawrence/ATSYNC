@@ -277,7 +277,9 @@ const DashboardLayout = () => {
             handleApproveIntake,
             handleToggleBriefLock,
             setIsModalOpen,
-            setModalMethod
+            setModalMethod,
+            sidebarOpen,
+            setSidebarOpen
           }} />
         </div>
       </div>

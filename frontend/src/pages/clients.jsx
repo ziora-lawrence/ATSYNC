@@ -16,12 +16,15 @@ export const Clients = () => {
     handleApproveIntake,
     handleToggleBriefLock,
     setIsModalOpen,
-    setModalMethod
+    setModalMethod,
+    sidebarOpen,
+    setSidebarOpen
   } = useOutletContext();
 
   const [messageInput, setMessageInput] = useState('');
-  const [colListCollapsed, setColListCollapsed] = useState(false);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const isMobile = () => window.innerWidth <= 768;
+  const [colListCollapsed, setColListCollapsed] = useState(isMobile());
+  const [rightPanelOpen, setRightPanelOpen] = useState(!isMobile());
   const [rightPanelTab, setRightPanelTab] = useState('intel');
   const [isApprovalOpen, setIsApprovalOpen] = useState(false);
   const [approvalRequestText, setApprovalRequestText] = useState('');
@@ -245,13 +248,20 @@ export const Clients = () => {
             <button className="add-cl-btn" onClick={() => { setIsModalOpen(true); setModalMethod('link'); }}>
               <i className="ti ti-plus"></i> Add client
             </button>
+            {/* Mobile close button for client roster */}
+            <button className="col-list-close" onClick={() => setColListCollapsed(true)} title="Close roster">
+              <i className="ti ti-x"></i>
+            </button>
           </div>
           <div className="cl-scroll">
             {activeRoster.map((c) => (
               <div
                 key={c.id}
                 className={`cl-item ${activeClient.id === c.id ? 'active' : ''}`}
-                onClick={() => setActiveClientId(c.id)}
+                onClick={() => {
+                  setActiveClientId(c.id);
+                  if (isMobile()) setColListCollapsed(true);
+                }}
               >
                 <span className={`dot dot-${getDotClass(c.statusDot)}`}></span>
                 {c.name}
@@ -264,7 +274,10 @@ export const Clients = () => {
               <div 
                 key={c.id} 
                 className={`cl-item ${activeClient.id === c.id ? 'active' : ''}`}
-                onClick={() => setActiveClientId(c.id)}
+                onClick={() => {
+                  setActiveClientId(c.id);
+                  if (isMobile()) setColListCollapsed(true);
+                }}
               >
                 <span className="dot dot-gray"></span>
                 {c.name}
@@ -274,18 +287,49 @@ export const Clients = () => {
           </div>
         </div>
 
+        {/* Mobile workspace backdrop under the header for tap-to-close behavior */}
+        {isMobile() && (!colListCollapsed || rightPanelOpen) && (
+          <div
+            className="workspace-backdrop"
+            onClick={() => {
+              setColListCollapsed(true);
+              setRightPanelOpen(false);
+            }}
+          />
+        )}
+
         {/* COLUMN 2: CHAT AREA */}
         <div className="col-chat">
           {/* Chat Header */}
           <div className="chat-top">
             <div className="chat-top-left">
+              {/* Main Sidebar Toggle (Hamburger) on mobile */}
+              {isMobile() && (
+                <div 
+                  className="list-tog" 
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  title="Toggle main menu"
+                  style={{ marginRight: '4px' }}
+                >
+                  <i className="ti ti-menu-2"></i>
+                </div>
+              )}
+              
+              {/* Roster Toggle */}
               <div 
                 className="list-tog" 
-                onClick={() => setColListCollapsed(!colListCollapsed)} 
-                title="Toggle client list"
+                onClick={() => {
+                  const nextState = !colListCollapsed;
+                  setColListCollapsed(nextState);
+                  if (!nextState) {
+                    setRightPanelOpen(false); // Close right panel if opening client list
+                  }
+                }} 
+                title="Toggle client roster"
               >
-                <i className="ti ti-layout-sidebar"></i>
+                <i className="ti ti-users"></i>
               </div>
+
               {hasClient ? (
                 <div>
                   <div className="chat-cname">{activeClient.name}</div>
@@ -297,6 +341,7 @@ export const Clients = () => {
                 <div className="chat-cname">Select a Client</div>
               )}
             </div>
+            
             <div className="chat-actions">
               {hasClient && (
                 <>
@@ -314,12 +359,20 @@ export const Clients = () => {
                   </button>
                 </>
               )}
+              
+              {/* Utilities Panel Toggle */}
               <div 
                 className="list-tog" 
-                onClick={() => setRightPanelOpen(!rightPanelOpen)} 
+                onClick={() => {
+                  const nextState = !rightPanelOpen;
+                  setRightPanelOpen(nextState);
+                  if (nextState) {
+                    setColListCollapsed(true); // Close client list if opening right panel
+                  }
+                }} 
                 title="Toggle utilities panel"
               >
-                <i className="ti ti-layout-sidebar-right"></i>
+                <i className="ti ti-info-circle"></i>
               </div>
             </div>
           </div>
@@ -398,6 +451,7 @@ export const Clients = () => {
               onApproveIntake={handleApproveIntake}
               onToggleBriefLock={handleToggleBriefLock}
               onAddPhase={handleAddPhase}
+              setRightPanelOpen={setRightPanelOpen}
             />
           </div>
         )}

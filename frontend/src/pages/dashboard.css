@@ -812,9 +812,30 @@ body:has(.shell) {
   padding: 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+/* Close button inside client roster panel - hidden on desktop */
+.col-list-close, .col-right-close {
+  display: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-sec);
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+.col-right-close {
+  margin-left: auto;
 }
 .add-cl-btn {
-  width: 100%;
+  flex: 1;
   padding: 8px;
   background: var(--ac-light);
   border: 1px solid rgba(108,71,255,0.2);
@@ -899,6 +920,9 @@ body:has(.shell) {
   justify-content: space-between;
   gap: 12px;
   flex-shrink: 0;
+  /* Must be above overlay panels on mobile */
+  position: relative;
+  z-index: 25;
 }
 .chat-top-left {
   display: flex;
@@ -1073,6 +1097,8 @@ body:has(.shell) {
   display: flex;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  align-items: center;
+  padding-right: 8px;
 }
 .ut {
   flex: 1;
@@ -2618,6 +2644,26 @@ body:has(.shell) {
     margin-left: 0 !important;
   }
 
+  /* Hide the topbar on mobile when the clients view is active to give full screen height to chat */
+  .shell:has(#view-clients) .topbar {
+    display: none;
+  }
+
+  .shell:has(#view-clients) .workspace {
+    height: 100vh !important;
+  }
+
+  /* Workspace backdrop under the header for tap-to-close behavior */
+  .workspace-backdrop {
+    display: block;
+    position: absolute;
+    inset: 58px 0 0 0; /* starts below header */
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(2px);
+    z-index: 15;
+    animation: fadeInBackdrop 0.2s ease;
+  }
+
   /* ── Topbar ── */
   .tb-title {
     font-size: 14px;
@@ -2632,37 +2678,105 @@ body:has(.shell) {
     grid-column: span 2;
   }
 
-  /* ── Clients workspace: stack vertically ── */
+  /* ── Clients workspace: overlay panels over full-screen chat ── */
   .workspace {
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
+    flex-direction: row;
+    overflow: hidden;
+    position: relative;
   }
-  .col-list {
+
+  /* Chat always fills full width on mobile */
+  .col-chat {
+    position: relative;
     width: 100% !important;
-    max-height: 220px;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    flex: 1;
+    min-height: 0;
+    z-index: 1;
+  }
+
+  /* Client roster slides in from the left as an overlay under the header */
+  .col-list {
+    position: absolute !important;
+    left: 0;
+    top: 58px !important;
+    bottom: 0;
+    width: 280px !important;
+    max-height: none !important;
+    height: calc(100% - 58px) !important;
+    transform: translateX(0);
+    transition: transform 0.26s cubic-bezier(.4,0,.2,1), opacity 0.2s;
+    z-index: 20;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+    opacity: 1;
+    pointer-events: auto;
   }
   .col-list.collapsed {
-    max-height: 0;
-    width: 100% !important;
+    transform: translateX(-100%);
     opacity: 0;
+    pointer-events: none;
+    width: 280px !important;
+    max-height: none !important;
   }
-  .col-chat {
-    min-height: 0;
-    flex: 1;
-  }
+
+  /* Right panel slides in from the right as an overlay under the header */
   .col-right {
-    width: 100% !important;
-    border-left: none;
-    border-top: 1px solid var(--border);
-    max-height: 320px;
+    position: absolute !important;
+    right: 0;
+    top: 58px !important;
+    bottom: 0;
+    width: 290px !important;
+    max-height: none !important;
+    height: calc(100% - 58px) !important;
+    transform: translateX(0);
+    transition: transform 0.26s cubic-bezier(.4,0,.2,1), opacity 0.2s;
+    z-index: 20;
+    border-left: 1px solid var(--border);
+    border-top: none;
+    opacity: 1;
+    pointer-events: auto;
   }
   .col-right.collapsed {
-    max-height: 0;
-    width: 100% !important;
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+    width: 290px !important;
+    max-height: none !important;
+  }
+
+  /* Show close buttons on mobile */
+  .col-list-close, .col-right-close {
+    display: flex;
+  }
+
+  /* Hide text action buttons in chat header on mobile to keep toggle icons accessible */
+  .chat-actions .btn-outline {
+    display: none;
+  }
+
+  /* Make chat header toggle buttons more prominent on mobile */
+  .list-tog {
+    width: 38px;
+    height: 38px;
+    font-size: 20px;
+    background: rgba(255,255,255,0.04);
+  }
+
+  /* Ensure chat-top doesn't overflow and floats on top of panels */
+  .chat-top {
+    height: 58px !important;
+    padding: 0 12px !important;
+    gap: 8px;
+    position: relative;
+    z-index: 25;
+    background: var(--bg-sub);
+    box-sizing: border-box;
+  }
+  .chat-cname {
+    font-size: 13px;
+  }
+  .chat-csub {
+    font-size: 11px;
   }
 
   /* ── Settings: single column ── */
