@@ -1,15 +1,9 @@
-/* Color Palette from image:
-Background: very dark #0d0d0f 
-Text: white / light grey
-Accents: Cyan #00d2ff
-Input bg: #303030
-Borders: #333
-*/
+/* ── ATSYNC Onboarding premium deep purple styles ── */
 
 .onboard-container {
-    background-color: #0b0b0d; /* very dark background */
-    color: #ffffff;
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #0C0C0F;
+    color: #F0EFF4;
+    font-family: 'Outfit', sans-serif;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -38,7 +32,7 @@ Borders: #333
 }
 
 .logo-blue {
-    color: #00d2ff;
+    color: #6C47FF;
 }
 
 .progress-container {
@@ -60,11 +54,11 @@ Borders: #333
 }
 
 .progress-step.completed {
-    background-color: #0087a3; /* darker cyan for completed steps */
+    background-color: #6C47FF;
 }
 
 .progress-step.active {
-    background-color: #00d2ff; /* bright cyan for active */
+    background-color: #A98BFF;
 }
 
 .step-text {
@@ -93,11 +87,11 @@ Borders: #333
 .progress-line {
     height: 100%;
     width: 33.33%;
-    background-color: #00d2ff;
+    background-color: #6C47FF;
 }
 
 .section-title {
-    color: #00d2ff;
+    color: #A98BFF;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 1.5px;
@@ -109,6 +103,7 @@ Borders: #333
     font-weight: 700;
     margin-bottom: 12px;
     margin-top: 0;
+    color: #fff;
 }
 
 .page-subheading {
@@ -123,13 +118,13 @@ Borders: #333
 }
 
 .section-heading {
-    color: #00d2ff;
+    color: #A98BFF;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 1.5px;
     margin-bottom: 24px;
     text-transform: uppercase;
-    border-bottom: 1px solid #1a1a1c;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
     padding-bottom: 12px;
 }
 
@@ -155,12 +150,12 @@ label {
 }
 
 .required {
-    color: #00d2ff;
+    color: #A98BFF;
 }
 
 input[type="text"], textarea, select {
-    background-color: #262626;
-    border: 1px solid #333;
+    background-color: #18181D;
+    border: 1px solid rgba(255,255,255,0.07);
     border-radius: 6px;
     padding: 14px 16px;
     color: #fff;
@@ -173,11 +168,11 @@ input[type="text"], textarea, select {
 }
 
 input[type="text"]::placeholder, textarea::placeholder {
-    color: #999;
+    color: #7B7A85;
 }
 
 input[type="text"]:focus, textarea:focus, select:focus {
-    border-color: #555;
+    border-color: #6C47FF;
 }
 
 textarea {
@@ -211,12 +206,12 @@ select {
 }
 
 select:invalid, select option[value=""] {
-    color: #999;
+    color: #7B7A85;
 }
 
 .help-text {
     font-size: 12px;
-    color: #666;
+    color: #7B7A85;
     margin-top: 8px;
     font-style: italic;
 }
@@ -229,7 +224,7 @@ select:invalid, select option[value=""] {
 
 .pill {
     background-color: transparent;
-    border: 1px solid #333;
+    border: 1px solid rgba(255,255,255,0.07);
     color: #bbb;
     padding: 8px 16px;
     border-radius: 20px;
@@ -240,13 +235,14 @@ select:invalid, select option[value=""] {
 }
 
 .pill:hover {
-    border-color: #555;
+    border-color: #6C47FF;
     color: #fff;
 }
 
 .pill.active {
-    border-color: #00d2ff;
-    color: #00d2ff;
+    border-color: #6C47FF;
+    color: #A98BFF;
+    background-color: rgba(108,71,255,0.1);
 }
 
 .pill.add-custom {
@@ -260,8 +256,8 @@ select:invalid, select option[value=""] {
 
 .tone-card {
     flex: 1;
-    background-color: #1a1a1c;
-    border: 1px solid #2a2a2c;
+    background-color: #131317;
+    border: 1px solid rgba(255,255,255,0.07);
     border-radius: 8px;
     padding: 24px 12px;
     display: flex;
@@ -272,15 +268,16 @@ select:invalid, select option[value=""] {
 }
 
 .tone-card:hover {
-    border-color: #444;
+    border-color: #6C47FF;
 }
 
 .tone-card.active {
-    border-color: #00d2ff;
+    border-color: #6C47FF;
+    background-color: rgba(108,71,255,0.1);
 }
 
 .tone-card.active .tone-label {
-    color: #00d2ff;
+    color: #A98BFF;
 }
 
 .tone-icon {
@@ -301,14 +298,14 @@ select:invalid, select option[value=""] {
     align-items: center;
     justify-content: space-between;
     padding: 30px 20px;
-    border-top: 1px solid #1a1a1c;
+    border-top: 1px solid rgba(255,255,255,0.07);
     margin-top: 20px;
     box-sizing: border-box;
 }
 
 .btn-back {
     background: transparent;
-    border: 1px solid #333;
+    border: 1px solid rgba(255,255,255,0.07);
     color: #fff;
     padding: 10px 24px;
     border-radius: 6px;
@@ -319,30 +316,30 @@ select:invalid, select option[value=""] {
 }
 
 .btn-back:hover {
-    border-color: #555;
-    background: #1a1a1c;
+    border-color: #6C47FF;
+    background: #131317;
 }
 
 .auto-save {
-    color: #555;
+    color: #7B7A85;
     font-size: 12px;
 }
 
 .btn-continue {
-    background: #fff;
+    background: #6C47FF;
     border: none;
-    color: #000;
+    color: #fff;
     padding: 10px 24px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
-    transition: background 0.2s;
+    transition: opacity 0.2s;
     font-family: inherit;
 }
 
 .btn-continue:hover {
-    background: #e6e6e6;
+    opacity: 0.9;
 }
 
 @media (max-width: 600px) {

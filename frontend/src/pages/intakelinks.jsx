@@ -1,10 +1,6 @@
 import React from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 
-/**
- * IntakeLinks page – displays intake stats, recent client questionnaire submissions,
- * onboarding approvals, and a history log of scope creep flags.
- */
 export const IntakeLinks = () => {
   const navigate = useNavigate();
   const {
@@ -33,8 +29,8 @@ export const IntakeLinks = () => {
         sentimentColor: 'green',
         priorityAction: 'Setup kickoff meeting with product owner.',
         tasks: [
-          { id: 1, text: 'Confirm project scope & details', completed: false, hours: 2, remaining: 2 },
-          { id: 2, text: 'Establish Slack / Communication group', completed: false, hours: 1, remaining: 1 }
+          { id: 1, text: 'Confirm project scope & details', completed: false, hours: 2, remaining: 2, overdue: false },
+          { id: 2, text: 'Establish Slack / Communication group', completed: false, hours: 1, remaining: 1, overdue: false }
         ],
         timeline: [
           { id: 1, date: 'Pending', title: 'Phase 1 — Onboarding', status: 'Active', progress: 50, active: true }
@@ -46,7 +42,7 @@ export const IntakeLinks = () => {
             senderName: 'BOB AI',
             avatarInitials: 'B',
             text: `Welcome onboard ${client.name}! Let's start by reviewing the project specifications.`,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            time: 'Just now'
           }
         ]
       }
@@ -58,7 +54,6 @@ export const IntakeLinks = () => {
       ...prev
     ]);
 
-    // Redirect to the newly onboarded client's chat
     setActiveClientId(client.id);
     navigate('/dashboard/clients');
   };
@@ -86,47 +81,38 @@ export const IntakeLinks = () => {
   }, []);
 
   return (
-    <div className="db-middle-panel" style={{ padding: '16px' }}>
-      <div className="db-header">
-        <h1>Intake Links</h1>
-        <p>Submissions, responses, and scope creep logs</p>
-      </div>
-
+    <div className="view" id="view-intake">
       {/* Stats cards */}
-      <div className="db-stats-grid">
-        <div className="stat-card">
-          <div className="stat-card-label">LINKS SENT</div>
-          <div className="stat-card-value">8</div>
-          <div className="stat-card-subtext">Active links</div>
+      <div className="metrics-grid">
+        <div className="mc accent">
+          <div className="mc-label">Links sent</div>
+          <div className="mc-val">8</div>
+          <div className="mc-sub">Active links</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-label">SUBMITTED</div>
-          <div className="stat-card-value">6</div>
-          <div className="stat-card-subtext">75% submission rate</div>
+        <div className="mc">
+          <div className="mc-label">Submitted</div>
+          <div className="mc-val">6</div>
+          <div className="mc-sub">75% submission rate</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-label">CONVERTED</div>
-          <div className="stat-card-value">{activeClients.length}</div>
-          <div className="stat-card-subtext">From intake</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-label">PENDING</div>
-          <div className="stat-card-value">{pendingClients.length}</div>
-          <div className="stat-card-subtext">Awaiting review</div>
+        <div className="mc">
+          <div className="mc-label">Converted</div>
+          <div className="mc-val">{activeClients.length}</div>
+          <div className="mc-sub">From intake links</div>
         </div>
       </div>
 
-      {/* Recent submissions table */}
-      <div style={{ marginTop: '20px' }}>
-        <div className="alerts-section-title">RECENT SUBMISSIONS</div>
+      {/* Recent submissions list */}
+      <div style={{ marginTop: '10px' }}>
+        <div className="sec-header">
+          <div className="sec-title">Recent submissions</div>
+        </div>
         <div className="alerts-list">
-          {/* Mock submissions + dynamic items */}
           {clients.map((c) => {
             const isPending = c.type === 'pending';
             const isActive = c.type === 'active';
             
             return (
-              <div key={c.id} className="alert-row" style={{ cursor: 'default' }}>
+              <div key={c.id} className="alert-row">
                 <div className="alert-info">
                   <div className="alert-company">{c.name}</div>
                   <div className="alert-desc">{c.service} · {c.budget} · {c.deadline}</div>
@@ -139,11 +125,6 @@ export const IntakeLinks = () => {
                     <button
                       className="row-btn"
                       onClick={() => handleApprove(c)}
-                      style={{
-                        borderColor: 'var(--cyan)',
-                        color: 'var(--cyan)',
-                        cursor: 'pointer',
-                      }}
                       type="button"
                     >
                       Approve
@@ -155,10 +136,9 @@ export const IntakeLinks = () => {
                         setActiveClientId(c.id);
                         navigate('/dashboard/clients');
                       }}
-                      style={{ cursor: 'pointer' }}
                       type="button"
                     >
-                      View
+                      View Chat
                     </button>
                   )}
                 </div>
@@ -167,21 +147,16 @@ export const IntakeLinks = () => {
           })}
 
           {/* Anon rejected lead */}
-          <div className="alert-row" style={{ cursor: 'default' }}>
+          <div className="alert-row">
             <div className="alert-info">
-              <div className="alert-company">Anon Lead</div>
-              <div className="alert-desc">Ecommerce · ₦200k · Rejected due to low budget</div>
+              <div className="alert-company">Chukwu Foods (Lead)</div>
+              <div className="alert-desc">Web Design · ₦100k · Low budget auto-flagged</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="alert-badge overdue">Rejected</span>
+              <span className="alert-badge overdue">Low Budget</span>
               <button
                 className="row-btn"
-                onClick={() => handleSendToMarket('Anon Lead (Ecommerce)')}
-                style={{
-                  borderColor: 'var(--yellow)',
-                  color: 'var(--yellow)',
-                  cursor: 'pointer',
-                }}
+                onClick={() => handleSendToMarket('Chukwu Foods')}
                 type="button"
               >
                 Send to market
@@ -191,28 +166,30 @@ export const IntakeLinks = () => {
         </div>
       </div>
 
-      {/* Scope creep log */}
+      {/* Scope creep logs */}
       <div style={{ marginTop: '20px' }}>
-        <div className="alerts-section-title">SCOPE CREEP LOG</div>
+        <div className="sec-header">
+          <div className="sec-title">Scope creep log</div>
+        </div>
         <div className="alerts-list">
           {loading ? (
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Loading logs...</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-sec)' }}>Loading logs...</div>
           ) : allScopeLogs.length === 0 ? (
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No scope creep flags reported</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-sec)' }}>No scope creep flags reported</div>
           ) : (
             allScopeLogs.map((log, index) => {
               const isResolved = log.status === 'Resolved';
               return (
-                <div key={index} className="alert-row" style={{ cursor: 'default' }}>
+                <div key={index} className="alert-row">
                   <div className="alert-info">
                     <div className="alert-company">{log.clientName}</div>
                     <div className="alert-desc">{log.desc}</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-sec)' }}>
                       {log.date}
                     </span>
-                    <span className={`alert-badge ${isResolved ? 'ready' : 'overdue'}`}>
+                    <span className={`alert-badge ${isResolved ? 'ready' : 'urgent'}`}>
                       {log.status}
                     </span>
                   </div>
