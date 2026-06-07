@@ -303,18 +303,6 @@ export const Clients = () => {
           {/* Chat Header */}
           <div className="chat-top">
             <div className="chat-top-left">
-              {/* Main Sidebar Toggle (Hamburger) on mobile */}
-              {isMobile() && (
-                <div 
-                  className="list-tog" 
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  title="Toggle main menu"
-                  style={{ marginRight: '4px' }}
-                >
-                  <i className="ti ti-menu-2"></i>
-                </div>
-              )}
-              
               {/* Roster Toggle */}
               <div 
                 className="list-tog" 

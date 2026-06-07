@@ -2644,14 +2644,7 @@ body:has(.shell) {
     margin-left: 0 !important;
   }
 
-  /* Hide the topbar on mobile when the clients view is active to give full screen height to chat */
-  .shell:has(#view-clients) .topbar {
-    display: none;
-  }
 
-  .shell:has(#view-clients) .workspace {
-    height: 100vh !important;
-  }
 
   /* Workspace backdrop under the header for tap-to-close behavior */
   .workspace-backdrop {
