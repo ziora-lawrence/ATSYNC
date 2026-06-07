@@ -1,48 +1,52 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
-/**
- * Top navigation bar – maintains visual parity with the existing "hacker‑terminal" theme.
- * Receives all props directly from DashboardLayout.
- */
 export const TopBar = ({
   loading,
+  title,
   notificationsList = [],
   isBellOpen,
   onBellClick,
   onClearNotifications,
-  onAddClientClick,
+  sidebarOpen,
+  setSidebarOpen,
+  onSearchClick,
 }) => {
   const unreadCount = notificationsList.filter(n => !n.read).length;
 
   return (
-    <header className="db-top-bar">
-      <Link to="/dashboard" className="db-logo">
-        ATSYNC
-      </Link>
+    <header className="topbar">
+      {/* Hamburger Menu Toggle */}
+      <div className="tb-ham" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        <i className="ti ti-menu-2"></i>
+      </div>
 
-      <div className="db-actions">
+      {/* Dynamic Title */}
+      <div className="tb-title" id="tb-title">
+        {title}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="tb-right">
         {/* Notification Bell */}
         <div style={{ position: 'relative' }}>
-          <div className="db-bell-wrapper" onClick={onBellClick}>
-            <i className="ti ti-bell" style={{ fontSize: '18px' }}></i>
-            {unreadCount > 0 && <span className="db-bell-badge"></span>}
+          <div className="tb-btn" onClick={onBellClick} title="Notifications">
+            <i className="ti ti-bell"></i>
+            {unreadCount > 0 && <span className="tb-bell-badge"></span>}
           </div>
 
           {/* Bell Dropdown */}
           {isBellOpen && (
             <div
+              className="profile-dropdown"
               style={{
                 position: 'absolute',
-                top: '30px',
+                top: '38px',
                 right: '0',
                 width: '260px',
-                backgroundColor: '#0a0f16',
-                border: '0.5px solid var(--border-color)',
-                borderRadius: '8px',
                 padding: '10px',
                 zIndex: 1000,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                bottom: 'auto',
+                left: 'auto',
               }}
             >
               <div
@@ -51,11 +55,11 @@ export const TopBar = ({
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   marginBottom: '8px',
-                  borderBottom: '0.5px solid var(--border-color)',
+                  borderBottom: '1px solid var(--border)',
                   paddingBottom: '6px',
                 }}
               >
-                <span style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#fff' }}>
                   NOTIFICATIONS
                 </span>
                 {notificationsList.length > 0 && (
@@ -64,10 +68,11 @@ export const TopBar = ({
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: 'var(--cyan)',
-                      fontSize: '9px',
+                      color: 'var(--ac-mid)',
+                      fontSize: '10px',
                       cursor: 'pointer',
-                      fontFamily: 'var(--font-mono)',
+                      fontWeight: '600',
+                      fontFamily: 'inherit',
                     }}
                   >
                     Clear All
@@ -76,8 +81,8 @@ export const TopBar = ({
               </div>
 
               {notificationsList.length === 0 ? (
-                <div style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '6px 0', textAlign: 'center' }}>
-                  No new alerts
+                <div style={{ fontSize: '11px', color: 'var(--text-sec)', padding: '6px 0', textAlign: 'center' }}>
+                  No new notifications
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '160px', overflowY: 'auto' }}>
@@ -85,10 +90,10 @@ export const TopBar = ({
                     <div
                       key={notif.id}
                       style={{
-                        fontSize: '10px',
-                        color: 'var(--text-primary)',
+                        fontSize: '11.5px',
+                        color: 'var(--text-sec)',
                         lineHeight: '1.4',
-                        borderBottom: '0.5px dashed #141c27',
+                        borderBottom: '1px dashed var(--border)',
                         paddingBottom: '6px',
                       }}
                     >
@@ -101,19 +106,9 @@ export const TopBar = ({
           )}
         </div>
 
-        {/* Add Client Button */}
-        <button
-          className="db-add-client-btn"
-          onClick={onAddClientClick}
-          disabled={loading}
-          type="button"
-        >
-          <i className="ti ti-plus"></i> Add client
-        </button>
-
-        {/* User Avatar */}
-        <div className="db-user-avatar">
-          DZ
+        {/* Search Trigger */}
+        <div className="tb-btn" title="Search" onClick={onSearchClick}>
+          <i className="ti ti-search"></i>
         </div>
       </div>
     </header>

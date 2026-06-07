@@ -177,6 +177,10 @@ const Landingpage = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
 
+  // ── Role-based login state ──
+  const [loginRole, setLoginRole] = useState("agency");
+  const [agencyId, setAgencyId] = useState("");
+
   const [stats, setStats] = useState({ agencies: 0, speed: 0, chaos: 0 });
   const statsRef = useRef(null);
   const statsAnimated = useRef(false);
@@ -312,6 +316,13 @@ const Landingpage = () => {
       if (!agencyEmail.trim()) { seterror("Email cannot be empty"); setIsAuthLoading(false); return; }
       if (!agencyPass.trim()) { seterror("Password cannot be empty"); setIsAuthLoading(false); return; }
 
+      // Staff/client must provide an agency ID
+      if ((loginRole === "staff" || loginRole === "client") && !agencyId.trim()) {
+        seterror("Please enter your Agency ID");
+        setIsAuthLoading(false);
+        return;
+      }
+
       try {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email: agencyEmail.trim(),
@@ -321,23 +332,29 @@ const Landingpage = () => {
         if (signInError) {
           seterror(signInError.message || "Invalid credentials");
         } else if (data.session) {
-          // Check if user has completed onboarding
-          const { data: profile } = await supabase
-            .from("agent_profiles")
-            .select("user_id")
-            .eq("user_id", data.user.id)
-            .single();
-
           seterror("");
           setShowLogin(false);
           window.scrollTo(0, 0);
 
-          if (profile) {
-            // Returning user — already onboarded, go straight to dashboard
-            navigate("/dashboard");
-          } else {
-            // New user — needs to complete onboarding first
-            navigate("/agent-onboard");
+          if (loginRole === "agency") {
+            // Check if agency owner has completed onboarding
+            const { data: profile } = await supabase
+              .from("agent_profiles")
+              .select("user_id")
+              .eq("user_id", data.user.id)
+              .single();
+
+            if (profile) {
+              navigate("/dashboard");
+            } else {
+              navigate("/agent-onboard");
+            }
+          } else if (loginRole === "staff") {
+            // Verify staff belongs to the agency and navigate to workspace
+            navigate(`/workspace/${agencyId.trim()}`);
+          } else if (loginRole === "client") {
+            // Navigate client to their specific agency portal
+            navigate(`/client-portal/${agencyId.trim()}`);
           }
         }
       } catch {
@@ -432,7 +449,7 @@ const Landingpage = () => {
             seterror("");
           }}
         >
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-box modal-glass" onClick={(e) => e.stopPropagation()}>
             <button
               className="modal-close"
               onClick={() => {
@@ -496,12 +513,37 @@ const Landingpage = () => {
               )
             ) : (
               <>
+                {/* ── Glass logo mark ── */}
+                <div className="modal-logo-mark">
+                  <span className="mlm-white">ATS</span><span className="mlm-cyan">YNC</span>
+                </div>
+
                 <h2>{isLogin ? "Welcome Back" : "Create Your Account"}</h2>
                 <p className="modal-subtitle">
                   {isLogin
-                    ? "Log in to your ATSYNC dashboard"
+                    ? "Sign in to your ATSYNC workspace"
                     : "Start managing clients the smart way"}
                 </p>
+
+                {/* ── Role selector (login only) ── */}
+                {isLogin && (
+                  <div className="role-tabs">
+                    {[
+                      { id: "agency", label: "Agency" },
+                      { id: "staff",  label: "Team Member" },
+                      { id: "client", label: "Client" },
+                    ].map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className={`role-tab ${loginRole === r.id ? "role-tab--active" : ""}`}
+                        onClick={() => { setLoginRole(r.id); seterror(""); setAgencyId(""); }}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {!isLogin && (
                   <input
@@ -512,13 +554,15 @@ const Landingpage = () => {
                     className="modal-input"
                   />
                 )}
+
                 <input
                   value={agencyEmail}
                   onChange={(e) => setagencyEmail(e.target.value)}
                   type="email"
-                  placeholder="Email"
+                  placeholder="Email Address"
                   className="modal-input"
                 />
+
                 <div className="password-input-container">
                   <input
                     value={agencyPass}
@@ -531,6 +575,7 @@ const Landingpage = () => {
                     {showPassword ? "🙈" : "👁️"}
                   </span>
                 </div>
+
                 {!isLogin && (
                   <div className="password-input-container">
                     <input
@@ -543,6 +588,23 @@ const Landingpage = () => {
                     <span className="eye-icon" onClick={() => setShowConPassword(!showConPassword)}>
                       {showConPassword ? "🙈" : "👁️"}
                     </span>
+                  </div>
+                )}
+
+                {/* ── Agency ID for staff and clients ── */}
+                {isLogin && (loginRole === "staff" || loginRole === "client") && (
+                  <div className="agency-id-field">
+                    <div className="agency-id-label">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      Agency ID
+                    </div>
+                    <input
+                      value={agencyId}
+                      onChange={(e) => setAgencyId(e.target.value)}
+                      type="text"
+                      placeholder={loginRole === "staff" ? "Enter your agency's ID" : "Enter the agency ID"}
+                      className="modal-input agency-id-input"
+                    />
                   </div>
                 )}
 
@@ -562,9 +624,11 @@ const Landingpage = () => {
                     {error}
                   </p>
                 )}
+
                 <button className="modal-submit" onClick={handleSubmit} disabled={isAuthLoading}>
-                  {isAuthLoading ? "Please wait..." : isLogin ? "Login" : "Create Account"}
+                  {isAuthLoading ? "Please wait..." : isLogin ? `Sign In as ${loginRole === "agency" ? "Agency" : loginRole === "staff" ? "Team Member" : "Client"}` : "Create Account"}
                 </button>
+
                 <p className="modal-toggle">
                   {isLogin ? "Don't have an account? " : "Already have an account? "}
                   <span onClick={() => { setIsLogin(!isLogin); seterror(""); }}>
@@ -583,7 +647,7 @@ const Landingpage = () => {
           className="modal-overlay"
           onClick={() => { setShowWaitlist(false); setIsWaitlistJoined(false); }}
         >
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-box modal-glass" onClick={(e) => e.stopPropagation()}>
             <button
               className="modal-close"
               onClick={() => { setShowWaitlist(false); setIsWaitlistJoined(false); }}
@@ -635,7 +699,7 @@ const Landingpage = () => {
       {/* ── Contact Modal ── */}
       {showContactModal && (
         <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-box modal-glass" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowContactModal(false)}>
               ✕
             </button>
@@ -844,8 +908,7 @@ const Landingpage = () => {
             {faqs.map((faq, index) => (
               <div
                 key={index}
-                className={`faq-item animate-on-scroll ${openFaq === index ? "open" : ""}`}
-                style={{ transitionDelay: `${index * 0.04}s` }}
+                className={`faq-item ${openFaq === index ? "open" : ""}`}
                 onClick={() => setOpenFaq(openFaq === index ? null : index)}
               >
                 <div className="faq-question">
@@ -854,9 +917,7 @@ const Landingpage = () => {
                     {openFaq === index ? "−" : "+"}
                   </div>
                 </div>
-                {openFaq === index && (
-                  <div className="faq-answer">{faq.answer}</div>
-                )}
+                <div className="faq-answer">{faq.answer}</div>
               </div>
             ))}
           </div>

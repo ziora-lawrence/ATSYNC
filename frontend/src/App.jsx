@@ -10,18 +10,17 @@ import Bob from './pages/bob';
 import Marketplace from './pages/marketplace';
 import Settings from './pages/settings';
 import ResetPassword from './pages/resetpassword';
+import Payments from './pages/payments';
 import { supabase } from './lib/supabase';
 
 const App = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        // Sync session details to localStorage for backend compatibility if not already set
         if (!localStorage.getItem('atsync_token')) {
           localStorage.setItem('atsync_token', session.access_token);
           
           try {
-            // Fetch the agency name from profiles table
             const { data: profile, error } = await supabase
               .from('profiles')
               .select('agency_name')
@@ -65,6 +64,7 @@ const App = () => {
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="clients" element={<Clients />} />
+        <Route path="payments" element={<Payments />} />
         <Route path="intake" element={<IntakeLinks />} />
         <Route path="bob" element={<Bob />} />
         <Route path="marketplace" element={<Marketplace />} />
@@ -74,4 +74,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default App;

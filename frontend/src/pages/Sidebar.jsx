@@ -1,21 +1,21 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
-/**
- * Sidebar navigation component that lists menu sections, active roster clients, and pending intakes.
- */
 export const Sidebar = ({
   clients = [],
   activeClientId,
   pendingIntakeCount,
   loading,
   onClientClick,
+  sidebarOpen,
+  setSidebarOpen,
+  onAddClientClick
 }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
-
-  const activeClients = clients.filter(c => c.type === 'active');
-  const pendingClients = clients.filter(c => c.type === 'pending');
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   const isNavActive = (path) => {
     if (path === '/dashboard') {
@@ -24,142 +24,147 @@ export const Sidebar = ({
     return currentPath.startsWith(path);
   };
 
-  const getDotClass = (dot) => {
-    if (dot === 'orange') return 'yellow';
-    return dot || 'gray';
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('atsync_token');
+    localStorage.removeItem('atsync_user');
+    navigate('/');
+  };
+
+  const agencyUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('atsync_user')) || { agencyName: 'Daniel Z.', email: '' };
+    } catch {
+      return { agencyName: 'Daniel Z.', email: '' };
+    }
+  })();
+
+  const getInitials = (name) => {
+    if (!name) return 'DZ';
+    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
 
   return (
-    <aside className="db-sidebar">
-      <div className="sb-category">MENU</div>
-      
-      <Link
-        to="/dashboard"
-        className={`sb-item ${isNavActive('/dashboard') && currentPath === '/dashboard' ? 'active' : ''}`}
-      >
-        <div className="sb-item-left">
+    <div className={`sidebar ${sidebarOpen ? 'open' : ''}`} id="sidebar">
+      {/* Brand Top */}
+      <div className="sb-top">
+        <div className="brand-logo">
+          <i className="ti ti-bolt"></i>
+        </div>
+        <span className="brand-name">ATSYNC</span>
+        <i className="ti ti-x sb-close" onClick={() => setSidebarOpen(false)}></i>
+      </div>
+
+      {/* Navigation Menu */}
+      <div className="nav-wrap">
+        <Link
+          to="/dashboard"
+          className={`ni ${isNavActive('/dashboard') && currentPath === '/dashboard' ? 'active' : ''}`}
+          title="Dashboard"
+        >
           <i className="ti ti-layout-dashboard"></i>
-          <span>Dashboard</span>
-        </div>
-      </Link>
+          <span className="ni-label">Dashboard</span>
+        </Link>
 
-      <Link
-        to="/dashboard/clients"
-        className={`sb-item ${isNavActive('/dashboard/clients') ? 'active' : ''}`}
-      >
-        <div className="sb-item-left">
+        <Link
+          to="/dashboard/clients"
+          className={`ni ${isNavActive('/dashboard/clients') ? 'active' : ''}`}
+          title="Clients"
+        >
           <i className="ti ti-users"></i>
-          <span>Clients</span>
-        </div>
-      </Link>
+          <span className="ni-label">Clients</span>
+        </Link>
 
-      <Link
-        to="/dashboard/intake"
-        className={`sb-item ${isNavActive('/dashboard/intake') ? 'active' : ''}`}
-      >
-        <div className="sb-item-left">
-          <i className="ti ti-link"></i>
-          <span>Intake Links</span>
-        </div>
-        {pendingClients.length > 0 && (
-          <span className="sb-badge-count">{pendingClients.length}</span>
-        )}
-      </Link>
+        <Link
+          to="/dashboard/payments"
+          className={`ni ${isNavActive('/dashboard/payments') ? 'active' : ''}`}
+          title="Payments"
+        >
+          <i className="ti ti-credit-card"></i>
+          <span className="ni-label">Payments</span>
+        </Link>
 
-      <Link
-        to="/dashboard/bob"
-        className={`sb-item ${isNavActive('/dashboard/bob') ? 'active' : ''}`}
-      >
-        <div className="sb-item-left">
+        <div className="ndiv"></div>
+
+        {/* Bob - dimmed link */}
+        <Link
+          to="/dashboard/bob"
+          className={`ni dimmed-link ${isNavActive('/dashboard/bob') ? 'active' : ''}`}
+          title="Bob — V1 Preview"
+        >
           <i className="ti ti-robot"></i>
-          <span>Bob</span>
-        </div>
-        <span className="sb-badge-v1">V1</span>
-      </Link>
+          <span className="ni-label">Bob</span>
+          <span className="nb">V1</span>
+        </Link>
 
-      <Link
-        to="/dashboard/marketplace"
-        className={`sb-item ${isNavActive('/dashboard/marketplace') ? 'active' : ''}`}
-      >
-        <div className="sb-item-left">
-          <i className="ti ti-shopping-bag"></i>
-          <span>Marketplace</span>
-        </div>
-        <span className="sb-badge-v1">V1</span>
-      </Link>
-
-      <Link
-        to="/dashboard/settings"
-        className={`sb-item ${isNavActive('/dashboard/settings') ? 'active' : ''}`}
-      >
-        <div className="sb-item-left">
-          <i className="ti ti-settings"></i>
-          <span>Settings</span>
-        </div>
-      </Link>
-
-      {/* Active Roster */}
-      <div className="sb-category" style={{ marginTop: '8px' }}>
-        ACTIVE ROSTER
+        {/* Marketplace - dimmed link */}
+        <Link
+          to="/dashboard/marketplace"
+          className={`ni dimmed-link ${isNavActive('/dashboard/marketplace') ? 'active' : ''}`}
+          title="Marketplace — V1 Preview"
+        >
+          <i className="ti ti-building-store"></i>
+          <span className="ni-label">Marketplace</span>
+          <span className="nb">V1</span>
+        </Link>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {loading ? (
-          <div style={{ padding: '6px 14px', fontSize: '10px', color: 'var(--text-secondary)' }}>
-            Loading roster...
+
+      {/* Sidebar Bottom */}
+      <div className="sb-bot">
+        <div className="ndiv"></div>
+
+        {/* Notifications */}
+        <div className="ni" title="Notifications">
+          <i className="ti ti-bell"></i>
+          <span className="ni-label">Notifications</span>
+        </div>
+
+        {/* Avatar Profile Trigger */}
+        <div className={`sb-avatar-wrap ${profileDropdownOpen ? 'open' : ''}`}>
+          <div className="sb-avatar-row" onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}>
+            <div className="avatar">{getInitials(agencyUser.agencyName)}</div>
+            <span className="sb-name">{agencyUser.agencyName}</span>
           </div>
-        ) : activeClients.length === 0 ? (
-          <div style={{ padding: '6px 14px', fontSize: '10px', color: 'var(--text-secondary)' }}>
-            No active clients
-          </div>
-        ) : (
-          activeClients.map((c) => (
-            <div
-              key={c.id}
-              className={`roster-item ${activeClientId === c.id ? 'active' : ''}`}
-              onClick={() => onClientClick(c.id)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                <span className={`roster-dot ${getDotClass(c.statusDot)}`}></span>
-                <span>{c.name}</span>
+
+          {/* Profile Dropdown */}
+          {profileDropdownOpen && (
+            <div className="profile-dropdown">
+              <div
+                className="pdrop-item"
+                onClick={() => {
+                  setProfileDropdownOpen(false);
+                  navigate('/dashboard/settings?tab=profile');
+                }}
+              >
+                <i className="ti ti-user"></i> Profile
               </div>
-              {activeClientId === c.id && (
-                <i className="ti ti-chevron-right roster-arrow"></i>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Pending Intake */}
-      <div className="sb-category" style={{ marginTop: '6px' }}>
-        PENDING INTAKE
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {loading ? (
-          <div style={{ padding: '5px 14px', fontSize: '10px', color: 'var(--text-secondary)' }}>
-            Loading pending...
-          </div>
-        ) : pendingClients.length === 0 ? (
-          <div style={{ padding: '5px 14px', fontSize: '10px', color: 'var(--text-secondary)' }}>
-            No pending intake
-          </div>
-        ) : (
-          pendingClients.map((c) => (
-            <div
-              key={c.id}
-              className="roster-item"
-              onClick={() => onClientClick(c.id)}
-              style={{ padding: '5px 14px', fontSize: '10px' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                <span className="roster-dot gray"></span>
-                <span style={{ color: 'var(--text-secondary)' }}>{c.name}</span>
+              <div
+                className="pdrop-item"
+                onClick={() => {
+                  setProfileDropdownOpen(false);
+                  navigate('/dashboard/settings');
+                }}
+              >
+                <i className="ti ti-settings"></i> Settings
+              </div>
+              <div
+                className="pdrop-item"
+                onClick={() => {
+                  setProfileDropdownOpen(false);
+                  navigate('/dashboard/intake');
+                }}
+              >
+                <i className="ti ti-link"></i> Intake Links
+              </div>
+              <div className="pdrop-div"></div>
+              <div className="pdrop-item danger" onClick={handleSignOut}>
+                <i className="ti ti-logout"></i> Sign Out
               </div>
             </div>
-          ))
-        )}
+          )}
+        </div>
       </div>
-    </aside>
+    </div>
   );
 };
 

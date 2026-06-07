@@ -659,11 +659,23 @@ body {
 }
 
 .faq-answer {
-  padding-top: 14px;
+  max-height: 0;
+  overflow: hidden;
+  padding-top: 0;
   font-size: 15px;
   color: var(--text-s);
   line-height: 1.72;
-  animation: faqReveal 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    padding-top 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease;
+  opacity: 0;
+}
+
+.faq-item.open .faq-answer {
+  max-height: 300px;
+  padding-top: 14px;
+  opacity: 1;
 }
 
 @keyframes faqReveal {
@@ -1058,6 +1070,39 @@ body {
   animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ── Glass variant for the login modal ── */
+.modal-glass {
+  background: rgba(12, 14, 22, 0.72);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 0 0 1px rgba(0, 229, 255, 0.08) inset,
+    0 32px 80px rgba(0, 0, 0, 0.65),
+    0 0 60px rgba(0, 229, 255, 0.05);
+  overflow: hidden;
+}
+
+/* Animated top-edge glow bar */
+.modal-glass::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 229, 255, 0.6) 30%,
+    rgba(139, 92, 246, 0.6) 70%,
+    transparent 100%
+  );
+  animation: glowBar 4s ease-in-out infinite alternate;
+}
+
+@keyframes glowBar {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+
 @keyframes modalIn {
   from { opacity: 0; transform: scale(0.93) translateY(16px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -1177,6 +1222,96 @@ body {
   background: rgba(255, 92, 92, 0.08);
   border: 1px solid rgba(255, 92, 92, 0.15);
   border-radius: var(--radius-sm);
+}
+
+.success-message {
+  color: #00e5a0;
+  background: rgba(0, 229, 160, 0.08);
+  border-color: rgba(0, 229, 160, 0.18);
+}
+
+/* ── Modal logo mark (glass modal header) ── */
+.modal-logo-mark {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  opacity: 0.65;
+}
+.modal-logo-mark .mlm-white { color: var(--text-p); }
+.modal-logo-mark .mlm-cyan  { color: var(--cyan); }
+
+/* ── Role selector tabs ── */
+.role-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 22px;
+}
+
+.role-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-t);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  letter-spacing: 0.2px;
+}
+
+.role-tab:hover {
+  color: var(--text-s);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.role-tab--active {
+  background: rgba(0, 229, 255, 0.12);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.1);
+}
+
+/* ── Agency ID field ── */
+.agency-id-field {
+  margin-bottom: 0;
+  animation: slideDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.agency-id-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+
+.agency-id-input {
+  border-color: rgba(0, 229, 255, 0.15) !important;
+  background: rgba(0, 229, 255, 0.03) !important;
+}
+
+.agency-id-input:focus {
+  border-color: rgba(0, 229, 255, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.1) !important;
 }
 
 /* Submit button */
