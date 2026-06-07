@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -44,6 +44,12 @@ export const Sidebar = ({
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
 
+  const handleNavClick = useCallback(() => {
+    if (window.innerWidth <= 768) {
+      setSidebarOpen(false);
+    }
+  }, [setSidebarOpen]);
+
   return (
     <div className={`sidebar ${sidebarOpen ? 'open' : ''}`} id="sidebar">
       {/* Brand Top */}
@@ -61,6 +67,7 @@ export const Sidebar = ({
           to="/dashboard"
           className={`ni ${isNavActive('/dashboard') && currentPath === '/dashboard' ? 'active' : ''}`}
           title="Dashboard"
+          onClick={handleNavClick}
         >
           <i className="ti ti-layout-dashboard"></i>
           <span className="ni-label">Dashboard</span>
@@ -70,6 +77,7 @@ export const Sidebar = ({
           to="/dashboard/clients"
           className={`ni ${isNavActive('/dashboard/clients') ? 'active' : ''}`}
           title="Clients"
+          onClick={handleNavClick}
         >
           <i className="ti ti-users"></i>
           <span className="ni-label">Clients</span>
@@ -79,6 +87,7 @@ export const Sidebar = ({
           to="/dashboard/payments"
           className={`ni ${isNavActive('/dashboard/payments') ? 'active' : ''}`}
           title="Payments"
+          onClick={handleNavClick}
         >
           <i className="ti ti-credit-card"></i>
           <span className="ni-label">Payments</span>
@@ -91,6 +100,7 @@ export const Sidebar = ({
           to="/dashboard/bob"
           className={`ni dimmed-link ${isNavActive('/dashboard/bob') ? 'active' : ''}`}
           title="Bob — V1 Preview"
+          onClick={handleNavClick}
         >
           <i className="ti ti-robot"></i>
           <span className="ni-label">Bob</span>
@@ -102,6 +112,7 @@ export const Sidebar = ({
           to="/dashboard/marketplace"
           className={`ni dimmed-link ${isNavActive('/dashboard/marketplace') ? 'active' : ''}`}
           title="Marketplace — V1 Preview"
+          onClick={handleNavClick}
         >
           <i className="ti ti-building-store"></i>
           <span className="ni-label">Marketplace</span>
@@ -133,6 +144,7 @@ export const Sidebar = ({
                 className="pdrop-item"
                 onClick={() => {
                   setProfileDropdownOpen(false);
+                  handleNavClick();
                   navigate('/dashboard/settings?tab=profile');
                 }}
               >
@@ -142,6 +154,7 @@ export const Sidebar = ({
                 className="pdrop-item"
                 onClick={() => {
                   setProfileDropdownOpen(false);
+                  handleNavClick();
                   navigate('/dashboard/settings');
                 }}
               >
@@ -151,6 +164,7 @@ export const Sidebar = ({
                 className="pdrop-item"
                 onClick={() => {
                   setProfileDropdownOpen(false);
+                  handleNavClick();
                   navigate('/dashboard/intake');
                 }}
               >
