@@ -231,6 +231,7 @@ const Landingpage = () => {
 
   // ── Stats counter animation ──
   useEffect(() => {
+    if (!sessionChecked) return;
     const animateValue = (start, end, duration, cb) => {
       let startTs = null;
       const step = (ts) => {
@@ -246,18 +247,18 @@ const Landingpage = () => {
       ([entry]) => {
         if (entry.isIntersecting && !statsAnimated.current) {
           statsAnimated.current = true;
-          animateValue(0, 500, 2200, (v) => setStats((s) => ({ ...s, agencies: v })));
+          animateValue(0, 10, 2200, (v) => setStats((s) => ({ ...s, agencies: v })));
           animateValue(0, 3, 2200, (v) => setStats((s) => ({ ...s, speed: v })));
           animateValue(0, 100, 2200, (v) => setStats((s) => ({ ...s, chaos: v })));
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.1 }
     );
 
     const el = statsRef.current;
     if (el) observer.observe(el);
     return () => { if (el) observer.unobserve(el); };
-  }, []);
+  }, [sessionChecked]);
 
   // ── Typewriter effect ──
   useEffect(() => {

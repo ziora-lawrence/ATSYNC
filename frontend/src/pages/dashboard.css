@@ -35,8 +35,12 @@ body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  height: 100vh;
+}
+
+/* Only lock scroll when the dashboard shell is mounted */
+body:has(.shell) {
   overflow: hidden;
+  height: 100vh;
 }
 
 /* Scrollbars */
@@ -2547,3 +2551,210 @@ body {
   font-size: 13px;
 }
 
+/* ═══════════════════════════════════════════
+   MOBILE RESPONSIVENESS
+   ═══════════════════════════════════════════ */
+
+/* Sidebar overlay backdrop for mobile */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(3px);
+  z-index: 29;
+  animation: fadeInBackdrop 0.2s ease;
+}
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.sidebar-backdrop.visible {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  /* ── Sidebar: fixed overlay on mobile ── */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.26s cubic-bezier(.4,0,.2,1), width 0.22s cubic-bezier(.4,0,.2,1);
+    z-index: 30;
+    width: 240px !important;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    width: 240px;
+    align-items: flex-start;
+  }
+  .sidebar .brand-name,
+  .sidebar .ni-label,
+  .sidebar .sb-name,
+  .sidebar .sb-close {
+    opacity: 1;
+    width: auto;
+    pointer-events: auto;
+  }
+  .sidebar .ni {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0 12px;
+  }
+  .sidebar .ndiv {
+    width: calc(100% - 16px);
+    margin: 8px;
+  }
+  .sidebar.open .nb {
+    position: static;
+    margin-left: auto;
+  }
+
+  /* ── Main wrap: full width always ── */
+  .main-wrap {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  /* ── Topbar ── */
+  .tb-title {
+    font-size: 14px;
+  }
+
+  /* ── Dashboard metrics grid: 2 cols on mobile ── */
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .metrics-grid .mc:last-child {
+    grid-column: span 2;
+  }
+
+  /* ── Clients workspace: stack vertically ── */
+  .workspace {
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .col-list {
+    width: 100% !important;
+    max-height: 220px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .col-list.collapsed {
+    max-height: 0;
+    width: 100% !important;
+    opacity: 0;
+  }
+  .col-chat {
+    min-height: 0;
+    flex: 1;
+  }
+  .col-right {
+    width: 100% !important;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 320px;
+  }
+  .col-right.collapsed {
+    max-height: 0;
+    width: 100% !important;
+  }
+
+  /* ── Settings: single column ── */
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+  }
+  .sn-item {
+    flex: 1;
+    min-width: 80px;
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  /* ── Profile grid: single col ── */
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Marketplace grid: 2 cols ── */
+  .mkt-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* ── Add modal: full width ── */
+  .add-modal {
+    width: 100%;
+    max-width: 100vw;
+    border-radius: var(--rl) var(--rl) 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  .db-modal-overlay {
+    align-items: flex-end;
+  }
+
+  /* ── Search overlay ── */
+  .search-overlay {
+    padding-top: 60px;
+    align-items: flex-start;
+  }
+  .search-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 12px;
+  }
+
+  /* ── Bob chat overlay ── */
+  .bob-chat-overlay {
+    width: calc(100% - 24px);
+    right: 12px;
+    left: 12px;
+  }
+
+  /* ── Payments ── */
+  .filter-strip {
+    flex-wrap: wrap;
+  }
+  .drawer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Toast position ── */
+  .db-toast {
+    bottom: 16px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Very small screens: single metric column */
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  .metrics-grid .mc:last-child {
+    grid-column: span 1;
+  }
+  .mkt-grid {
+    grid-template-columns: 1fr;
+  }
+  .topbar {
+    padding: 0 10px;
+    gap: 8px;
+  }
+}

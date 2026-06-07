@@ -223,6 +223,15 @@ const DashboardLayout = () => {
 
   return (
     <div className="shell">
+      {/* SIDEBAR BACKDROP (mobile only) */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-backdrop visible"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* SIDEBAR */}
       <Sidebar
         clients={clients}
