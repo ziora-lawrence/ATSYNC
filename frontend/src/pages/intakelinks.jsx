@@ -12,6 +12,15 @@ export const IntakeLinks = () => {
     setActiveClientId,
   } = useOutletContext();
 
+  const user = JSON.parse(localStorage.getItem("atsync_user") || "{}");
+  const agencyId = user.agencyId;
+  const intakeLink = `${window.location.origin}/intake/${agencyId}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(intakeLink);
+    triggerToast('Intake link copied to clipboard');
+  };
+
   const activeClients = clients.filter(c => c.type === 'active');
   const pendingClients = clients.filter(c => c.type === 'pending');
 
@@ -66,7 +75,6 @@ export const IntakeLinks = () => {
     ]);
   };
 
-  // Compile all scope creep logs from active clients
   const allScopeLogs = clients.reduce((acc, c) => {
     if (c.scopeCreepLog && c.scopeCreepLog.length > 0) {
       c.scopeCreepLog.forEach(log => {
@@ -82,6 +90,56 @@ export const IntakeLinks = () => {
 
   return (
     <div className="view" id="view-intake">
+
+      {/* Intake link section */}
+      <div className="sec-header" style={{ marginBottom: '16px' }}>
+        <div>
+          <div className="sec-title">Your intake link</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-sec)', marginTop: '4px' }}>
+            Share this link with potential clients
+          </div>
+        </div>
+      </div>
+
+      {agencyId ? (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          background: 'var(--bg-sub)',
+          border: '1px solid var(--border)',
+          borderRadius: '8px',
+          padding: '10px 14px',
+          marginBottom: '24px'
+        }}>
+          <span style={{
+            fontSize: '12px',
+            color: 'var(--text-sec)',
+            flex: 1,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
+            {intakeLink}
+          </span>
+          <button className="row-btn" onClick={handleCopyLink}>
+            <i className="ti ti-copy"></i> Copy
+          </button>
+        </div>
+      ) : (
+        <div style={{
+          fontSize: '12px',
+          color: 'var(--text-sec)',
+          marginBottom: '24px',
+          padding: '10px 14px',
+          background: 'var(--bg-sub)',
+          border: '1px solid var(--border)',
+          borderRadius: '8px'
+        }}>
+          Log in to generate your intake link
+        </div>
+      )}
+
       {/* Stats cards */}
       <div className="metrics-grid">
         <div className="mc accent">
@@ -110,7 +168,7 @@ export const IntakeLinks = () => {
           {clients.map((c) => {
             const isPending = c.type === 'pending';
             const isActive = c.type === 'active';
-            
+
             return (
               <div key={c.id} className="alert-row">
                 <div className="alert-info">
@@ -199,6 +257,7 @@ export const IntakeLinks = () => {
           )}
         </div>
       </div>
+
     </div>
   );
 };

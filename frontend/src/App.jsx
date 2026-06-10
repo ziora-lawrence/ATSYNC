@@ -11,6 +11,7 @@ import Marketplace from './pages/marketplace';
 import Settings from './pages/settings';
 import ResetPassword from './pages/resetpassword';
 import Payments from './pages/payments';
+import IntakePortal from './pages/intakeportal';  // ← add this
 import { supabase } from './lib/supabase';
 
 const App = () => {
@@ -31,11 +32,13 @@ const App = () => {
               localStorage.setItem('atsync_user', JSON.stringify({
                 email: session.user.email,
                 agencyName: profile.agency_name,
+                agencyId: session.user.id,
               }));
             } else {
               localStorage.setItem('atsync_user', JSON.stringify({
                 email: session.user.email,
                 agencyName: session.user.user_metadata?.agency_name || '',
+                agencyId: session.user.id,
               }));
             }
           } catch (err) {
@@ -43,6 +46,7 @@ const App = () => {
             localStorage.setItem('atsync_user', JSON.stringify({
               email: session.user.email,
               agencyName: session.user.user_metadata?.agency_name || '',
+              agencyId: session.user.id,
             }));
           }
         }
@@ -59,6 +63,7 @@ const App = () => {
       <Route path="/" element={<Landingpage />} />
       <Route path="/agent-onboard" element={<Agentonboard />} />
       <Route path="/reset" element={<ResetPassword />} />
+      <Route path="/intake/:agencyId" element={<IntakePortal />} />  {/* ← moved outside */}
       
       {/* Nested Dashboard Center Routes */}
       <Route path="/dashboard" element={<DashboardLayout />}>
