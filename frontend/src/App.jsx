@@ -11,7 +11,7 @@ import Marketplace from './pages/marketplace';
 import Settings from './pages/settings';
 import ResetPassword from './pages/resetpassword';
 import Payments from './pages/payments';
-import IntakePortal from './pages/intakeportal';  // ← add this
+import IntakePortal from './pages/intakeportal'; 
 import { supabase } from './lib/supabase';
 
 const App = () => {
