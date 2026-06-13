@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export const IntakeLinks = () => {
   const navigate = useNavigate();
@@ -16,15 +17,103 @@ export const IntakeLinks = () => {
   const agencyId = user.agencyId;
   const intakeLink = `${window.location.origin}/intake/${agencyId}`;
 
+  const [pendingSubmissions, setPendingSubmissions] = useState([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(true);
+
+  // Fetch real pending intake submissions for this agency
+  useEffect(() => {
+    if (!agencyId) {
+      setSubmissionsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchSubmissions = async () => {
+      setSubmissionsLoading(true);
+      const { data, error } = await supabase
+        .from('intake_submissions')
+        .select('*')
+        .eq('agency_id', agencyId)
+        .order('created_at', { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        console.error('Error fetching intake submissions:', error);
+        setPendingSubmissions([]);
+      } else {
+        // Shape Supabase rows to match what this component (and handleApprove) expects
+        const shaped = (data || []).map((row) => ({
+          id: row.id,
+          type: row.status === 'approved' ? 'active' : 'pending',
+          name: row.business_name || row.name,
+          contactName: row.name,
+          email: row.email,
+          service: row.service_needed,
+          description: row.description,
+          budget: row.budget || 'Not specified',
+          deadline: row.deadline || 'Not specified',
+          status: row.status,
+          source: 'supabase',
+        }));
+        setPendingSubmissions(shaped);
+      }
+      setSubmissionsLoading(false);
+    };
+
+    fetchSubmissions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [agencyId]);
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(intakeLink);
     triggerToast('Intake link copied to clipboard');
   };
 
+  // Mocked active clients (kept until real approval flow creates real clients)
   const activeClients = clients.filter(c => c.type === 'active');
-  const pendingClients = clients.filter(c => c.type === 'pending');
 
-  const handleApprove = (client) => {
+  // Only show real pending submissions that are still 'pending' status
+  const pendingFromSupabase = pendingSubmissions.filter(c => c.status === 'pending');
+
+  // Combined list for the "Recent submissions" section
+  const combinedList = [...pendingFromSupabase, ...activeClients];
+
+  const handleApprove = async (client) => {
+    if (client.source === 'supabase') {
+      // Update status in Supabase
+      const { error } = await supabase
+        .from('intake_submissions')
+        .update({ status: 'approved' })
+        .eq('id', client.id);
+
+      if (error) {
+        console.error('Error approving submission:', error);
+        triggerToast('Failed to approve — try again');
+        return;
+      }
+
+      // Remove from local pending list (it's now 'approved')
+      setPendingSubmissions(prev =>
+        prev.map(c => (c.id === client.id ? { ...c, status: 'approved', type: 'active' } : c))
+      );
+
+      triggerToast(`${client.name} approved! Account invite pending.`);
+      setNotificationsList(prev => [
+        { id: Date.now(), text: `${client.name} approved from intake. Invite flow not wired yet.`, read: false },
+        ...prev
+      ]);
+
+      // NOTE: email invite + account creation flow not built yet —
+      // for now this just flips status to 'approved' in Supabase.
+      return;
+    }
+
+    // --- Existing mocked-client approval logic (unchanged) ---
     setClients(prev => prev.map(c =>
       c.id !== client.id ? c : {
         ...c,
@@ -149,8 +238,8 @@ export const IntakeLinks = () => {
         </div>
         <div className="mc">
           <div className="mc-label">Submitted</div>
-          <div className="mc-val">6</div>
-          <div className="mc-sub">75% submission rate</div>
+          <div className="mc-val">{pendingSubmissions.length}</div>
+          <div className="mc-sub">Total intake submissions</div>
         </div>
         <div className="mc">
           <div className="mc-label">Converted</div>
@@ -165,44 +254,55 @@ export const IntakeLinks = () => {
           <div className="sec-title">Recent submissions</div>
         </div>
         <div className="alerts-list">
-          {clients.map((c) => {
-            const isPending = c.type === 'pending';
-            const isActive = c.type === 'active';
+          {submissionsLoading ? (
+            <div style={{ fontSize: '11px', color: 'var(--text-sec)' }}>Loading submissions...</div>
+          ) : combinedList.length === 0 ? (
+            <div style={{ fontSize: '11px', color: 'var(--text-sec)' }}>No submissions yet</div>
+          ) : (
+            combinedList.map((c) => {
+              const isPending = c.type === 'pending';
+              const isActive = c.type === 'active';
 
-            return (
-              <div key={c.id} className="alert-row">
-                <div className="alert-info">
-                  <div className="alert-company">{c.name}</div>
-                  <div className="alert-desc">{c.service} · {c.budget} · {c.deadline}</div>
+              return (
+                <div key={c.id} className="alert-row">
+                  <div className="alert-info">
+                    <div className="alert-company">{c.name}</div>
+                    <div className="alert-desc">{c.service} · {c.budget} · {c.deadline}</div>
+                    {c.description && (
+                      <div className="alert-desc" style={{ marginTop: '4px', opacity: 0.8 }}>
+                        {c.description}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className={`alert-badge ${isActive ? 'ready' : 'pending'}`}>
+                      {isActive ? 'Active' : 'Pending'}
+                    </span>
+                    {isPending ? (
+                      <button
+                        className="row-btn"
+                        onClick={() => handleApprove(c)}
+                        type="button"
+                      >
+                        Approve
+                      </button>
+                    ) : (
+                      <button
+                        className="row-btn"
+                        onClick={() => {
+                          setActiveClientId(c.id);
+                          navigate('/dashboard/clients');
+                        }}
+                        type="button"
+                      >
+                        View Chat
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={`alert-badge ${isActive ? 'ready' : 'pending'}`}>
-                    {isActive ? 'Active' : 'Pending'}
-                  </span>
-                  {isPending ? (
-                    <button
-                      className="row-btn"
-                      onClick={() => handleApprove(c)}
-                      type="button"
-                    >
-                      Approve
-                    </button>
-                  ) : (
-                    <button
-                      className="row-btn"
-                      onClick={() => {
-                        setActiveClientId(c.id);
-                        navigate('/dashboard/clients');
-                      }}
-                      type="button"
-                    >
-                      View Chat
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
 
           {/* Anon rejected lead */}
           <div className="alert-row">

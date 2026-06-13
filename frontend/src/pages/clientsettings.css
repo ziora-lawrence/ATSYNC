@@ -1,0 +1,274 @@
+/* ── CLIENT SETTINGS CSS ── */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+.cs-shell {
+  min-height: 100vh;
+  background: #09090f;
+  color: #eeeef5;
+  font-family: 'Outfit', -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top bar */
+.cs-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: #0f0f17;
+  flex-shrink: 0;
+}
+
+.cs-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #6b6b80;
+  font-size: 13px;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.cs-back-btn:hover { color: #eeeef5; }
+
+.cs-topbar-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Body */
+.cs-body {
+  display: flex;
+  flex: 1;
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 32px 24px;
+  gap: 32px;
+}
+
+/* Nav */
+.cs-nav {
+  width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cs-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #6b6b80;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.cs-nav-item:hover { background: #141420; color: #eeeef5; }
+.cs-nav-item.active {
+  background: #141420;
+  color: #eeeef5;
+  font-weight: 600;
+}
+.cs-nav-item i { font-size: 15px; }
+
+/* Content */
+.cs-content { flex: 1; min-width: 0; }
+
+.cs-pane { display: flex; flex-direction: column; gap: 24px; }
+
+.cs-section {
+  background: #141420;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cs-section.danger { border-color: rgba(239,68,68,0.2); }
+
+.cs-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #eeeef5;
+}
+.cs-section-title.danger { color: #ef4444; }
+
+.cs-section-desc { font-size: 12px; color: #6b6b80; margin-top: -6px; }
+
+/* Form */
+.cs-form-group { display: flex; flex-direction: column; gap: 5px; }
+
+.cs-label { font-size: 12px; color: #6b6b80; font-weight: 500; }
+
+.cs-input {
+  background: #0f0f17;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #eeeef5;
+  font-family: 'Outfit', sans-serif;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cs-input:focus { border-color: #6C47FF; }
+
+.cs-btn-primary {
+  align-self: flex-start;
+  background: #6C47FF;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-top: 4px;
+}
+.cs-btn-primary:hover { opacity: 0.85; }
+
+/* Toggle */
+.cs-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.cs-toggle-label { font-size: 13px; font-weight: 500; }
+.cs-toggle-desc { font-size: 11px; color: #6b6b80; margin-top: 2px; }
+
+.cs-toggle {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.1);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.cs-toggle.on { background: #6C47FF; }
+.cs-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+.cs-toggle.on .cs-toggle-thumb { transform: translateX(16px); }
+
+/* Agency rows (intake tab) */
+.cs-agency-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.cs-agency-row:last-child { border-bottom: none; }
+
+.cs-agency-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.cs-agency-name { font-size: 13px; font-weight: 600; }
+.cs-agency-meta { font-size: 11px; color: #6b6b80; margin-top: 2px; }
+
+/* Badges */
+.cs-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.cs-badge.pending {
+  background: rgba(245,158,11,0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245,158,11,0.2);
+}
+.cs-badge.rejected {
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+.cs-badge.paid {
+  background: rgba(29,158,117,0.12);
+  color: #1D9E75;
+  border: 1px solid rgba(29,158,117,0.2);
+}
+
+.cs-empty {
+  font-size: 12px;
+  color: #3f3f55;
+  padding: 8px 0;
+}
+
+/* Invoice table */
+.cs-invoice-table { display: flex; flex-direction: column; gap: 2px; }
+.cs-invoice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.cs-invoice-row:last-child { border-bottom: none; }
+.cs-invoice-name { font-size: 13px; font-weight: 600; }
+.cs-invoice-project { font-size: 11px; color: #6b6b80; margin-top: 2px; }
+.cs-invoice-right { display: flex; align-items: center; gap: 10px; }
+.cs-invoice-amount { font-size: 13px; font-weight: 700; }
+
+/* Danger zone */
+.cs-danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.cs-danger-label { font-size: 13px; font-weight: 600; color: #eeeef5; }
+.cs-danger-desc { font-size: 11px; color: #6b6b80; margin-top: 3px; }
+
+.cs-btn-danger {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  color: #ef4444;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.cs-btn-danger:hover { background: rgba(239,68,68,0.18); }
+
+.cs-divider {
+  height: 1px;
+  background: rgba(239,68,68,0.15);
+}
