@@ -14,6 +14,7 @@ import Payments from './pages/payments';
 import IntakePortal from './pages/intakeportal'; 
 import ClientPortal from './pages/clientportal.jsx';
 import ClientSettings from './pages/clientsettings';
+import ClientSignup from './pages/clientsignup';
 import { supabase } from './lib/supabase';
 
 
@@ -23,7 +24,7 @@ const App = () => {
       if (session) {
         if (!localStorage.getItem('atsync_token')) {
           localStorage.setItem('atsync_token', session.access_token);
-          
+
           try {
             const { data: profile, error } = await supabase
               .from('profiles')
@@ -37,20 +38,11 @@ const App = () => {
                 agencyName: profile.agency_name,
                 agencyId: session.user.id,
               }));
-            } else {
-              localStorage.setItem('atsync_user', JSON.stringify({
-                email: session.user.email,
-                agencyName: session.user.user_metadata?.agency_name || '',
-                agencyId: session.user.id,
-              }));
             }
+            // If no profile row exists, this is a client account -
+            // don't write agency-shaped data to localStorage.
           } catch (err) {
             console.error('Error fetching profile in onAuthStateChange:', err);
-            localStorage.setItem('atsync_user', JSON.stringify({
-              email: session.user.email,
-              agencyName: session.user.user_metadata?.agency_name || '',
-              agencyId: session.user.id,
-            }));
           }
         }
       }
@@ -69,6 +61,7 @@ const App = () => {
       <Route path="/intake/:agencyId" element={<IntakePortal />} />
       <Route path="/client/:clientId" element={<ClientPortal />} />
       <Route path="/client/settings" element={<ClientSettings />} />
+      <Route path="/client/signup" element={<ClientSignup />} />
       
       {/* Nested Dashboard Center Routes */}
       <Route path="/dashboard" element={<DashboardLayout />}>

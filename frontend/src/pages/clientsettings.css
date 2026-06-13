@@ -272,3 +272,15 @@
   height: 1px;
   background: rgba(239,68,68,0.15);
 }
+
+.cs-error {
+  color: #f87171;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.cs-success {
+  color: #1D9E75;
+  font-size: 12px;
+  margin-top: 8px;
+}

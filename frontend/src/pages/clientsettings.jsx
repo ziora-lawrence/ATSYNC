@@ -1,18 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import './clientsettings.css';
-
-const mockClient = {
-  name: 'Chidi Okeke',
-  email: 'chidi@example.com',
-  phone: '+234 801 234 5678',
-  initials: 'CO',
-};
-
-const pendingAgencies = [
-  { id: 'ag-3', name: 'Kreatif Studio', initials: 'KS', color: '#0ea5e9', submittedDate: 'Jun 9', status: 'pending' },
-  { id: 'ag-4', name: 'Vox Media NG', initials: 'VM', color: '#8b5cf6', submittedDate: 'Jun 5', status: 'rejected', reason: 'Budget below minimum' },
-];
 
 const navItems = [
   { id: 'general', icon: 'ti-settings-2', label: 'General' },
@@ -22,9 +11,30 @@ const navItems = [
   { id: 'danger', icon: 'ti-alert-triangle', label: 'Danger zone' },
 ];
 
+const getInitials = (name = '') => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
+
+const AGENCY_COLORS = ['#6C47FF', '#0ea5e9', '#1D9E75', '#f59e0b', '#ec4899'];
+
 const ClientSettings = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('general');
+
+  const [client, setClient] = useState(null);
+  const [name, setName] = useState('');
+  const [profileSaveState, setProfileSaveState] = useState('idle');
+  const [profileError, setProfileError] = useState('');
+
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordSaveState, setPasswordSaveState] = useState('idle');
+  const [passwordError, setPasswordError] = useState('');
+
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(true);
+
   const [toggles, setToggles] = useState({
     emailUpdates: true,
     approvalAlerts: true,
@@ -32,12 +42,85 @@ const ClientSettings = () => {
     digestWeekly: false,
   });
 
-  const toggle = key => setToggles(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleItem = key => setToggles(prev => ({ ...prev, [key]: !prev[key] }));
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !userData?.user) {
+        console.error('Error getting user:', userError);
+        setSubmissionsLoading(false);
+        return;
+      }
+
+      setClient(userData.user);
+      setName(userData.user.user_metadata?.full_name || '');
+
+      const { data, error } = await supabase
+        .from('intake_submissions')
+        .select('*')
+        .eq('client_id', userData.user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching intake submissions:', error);
+      } else {
+        setSubmissions(data || []);
+      }
+      setSubmissionsLoading(false);
+    };
+
+    load();
+  }, []);
+
+  const handleSaveProfile = async () => {
+    setProfileSaveState('saving');
+    setProfileError('');
+
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: name.trim() },
+    });
+
+    if (error) {
+      console.error('Error updating profile:', error);
+      setProfileError('Could not save changes.');
+      setProfileSaveState('error');
+      return;
+    }
+
+    setProfileSaveState('saved');
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters.');
+      setPasswordSaveState('error');
+      return;
+    }
+
+    setPasswordSaveState('saving');
+    setPasswordError('');
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      console.error('Error updating password:', error);
+      setPasswordError(error.message || 'Could not update password.');
+      setPasswordSaveState('error');
+      return;
+    }
+
+    setPasswordSaveState('saved');
+    setNewPassword('');
+  };
+
+  const pendingSubmissions = submissions.filter(s => s.status === 'pending');
+  const rejectedSubmissions = submissions.filter(s => s.status === 'rejected');
 
   return (
     <div className="cs-shell">
 
-      {/* Top bar */}
       <div className="cs-topbar">
         <button className="cs-back-btn" onClick={() => navigate(-1)}>
           <i className="ti ti-arrow-left"></i> Back to portal
@@ -47,7 +130,6 @@ const ClientSettings = () => {
 
       <div className="cs-body">
 
-        {/* Sidebar nav */}
         <div className="cs-nav">
           {navItems.map(item => (
             <div
@@ -61,49 +143,82 @@ const ClientSettings = () => {
           ))}
         </div>
 
-        {/* Content */}
         <div className="cs-content">
 
-          {/* ── GENERAL ── */}
           {activeTab === 'general' && (
             <div className="cs-pane">
               <div className="cs-section">
                 <div className="cs-section-title">Profile</div>
                 <div className="cs-form-group">
                   <label className="cs-label">Full name</label>
-                  <input className="cs-input" defaultValue={mockClient.name} />
+                  <input
+                    className="cs-input"
+                    value={name}
+                    onChange={e => { setName(e.target.value); setProfileSaveState('idle'); }}
+                  />
                 </div>
                 <div className="cs-form-group">
                   <label className="cs-label">Email</label>
-                  <input className="cs-input" defaultValue={mockClient.email} />
+                  <input className="cs-input" value={client?.email || ''} disabled />
                 </div>
-                <div className="cs-form-group">
-                  <label className="cs-label">Phone</label>
-                  <input className="cs-input" defaultValue={mockClient.phone} />
-                </div>
-                <button className="cs-btn-primary">Save changes</button>
+
+                {profileSaveState === 'error' && (
+                  <div className="cs-error">{profileError}</div>
+                )}
+                {profileSaveState === 'saved' && (
+                  <div className="cs-success">Saved!</div>
+                )}
+
+                <button
+                  className="cs-btn-primary"
+                  onClick={handleSaveProfile}
+                  disabled={profileSaveState === 'saving'}
+                >
+                  {profileSaveState === 'saving' ? 'Saving...' : 'Save changes'}
+                </button>
               </div>
 
               <div className="cs-section">
                 <div className="cs-section-title">Password</div>
-                <div className="cs-form-group">
-                  <label className="cs-label">Current password</label>
-                  <input className="cs-input" type="password" placeholder="••••••••" />
+                <div className="cs-section-desc">
+                  Enter a new password below. You'll stay logged in on this device.
                 </div>
                 <div className="cs-form-group">
                   <label className="cs-label">New password</label>
-                  <input className="cs-input" type="password" placeholder="••••••••" />
+                  <input
+                    className="cs-input"
+                    type="password"
+                    placeholder="At least 6 characters"
+                    value={newPassword}
+                    onChange={e => { setNewPassword(e.target.value); setPasswordSaveState('idle'); }}
+                  />
                 </div>
-                <button className="cs-btn-primary">Update password</button>
+
+                {passwordSaveState === 'error' && (
+                  <div className="cs-error">{passwordError}</div>
+                )}
+                {passwordSaveState === 'saved' && (
+                  <div className="cs-success">Password updated!</div>
+                )}
+
+                <button
+                  className="cs-btn-primary"
+                  onClick={handleUpdatePassword}
+                  disabled={passwordSaveState === 'saving'}
+                >
+                  {passwordSaveState === 'saving' ? 'Updating...' : 'Update password'}
+                </button>
               </div>
             </div>
           )}
 
-          {/* ── NOTIFICATIONS ── */}
           {activeTab === 'notifications' && (
             <div className="cs-pane">
               <div className="cs-section">
                 <div className="cs-section-title">Email notifications</div>
+                <div className="cs-section-desc">
+                  These preferences aren't saved yet — coming soon.
+                </div>
                 {[
                   { key: 'emailUpdates', label: 'Project updates', desc: 'When an agency moves your project to a new phase' },
                   { key: 'approvalAlerts', label: 'Approval requests', desc: 'When an agency needs you to review a deliverable' },
@@ -117,7 +232,7 @@ const ClientSettings = () => {
                     </div>
                     <div
                       className={`cs-toggle ${toggles[item.key] ? 'on' : ''}`}
-                      onClick={() => toggle(item.key)}
+                      onClick={() => toggleItem(item.key)}
                     >
                       <div className="cs-toggle-thumb"></div>
                     </div>
@@ -127,21 +242,32 @@ const ClientSettings = () => {
             </div>
           )}
 
-          {/* ── INTAKE ── */}
           {activeTab === 'intake' && (
             <div className="cs-pane">
               <div className="cs-section">
                 <div className="cs-section-title">Pending responses</div>
-                <div className="cs-section-desc">Agencies you've submitted intake forms to that haven't responded yet.</div>
-                {pendingAgencies.filter(a => a.status === 'pending').length === 0 ? (
+                <div className="cs-section-desc">
+                  Agencies you've submitted intake forms to that haven't responded yet.
+                </div>
+                {submissionsLoading ? (
+                  <div className="cs-empty">Loading...</div>
+                ) : pendingSubmissions.length === 0 ? (
                   <div className="cs-empty">No pending submissions</div>
                 ) : (
-                  pendingAgencies.filter(a => a.status === 'pending').map(ag => (
-                    <div key={ag.id} className="cs-agency-row">
-                      <div className="cs-agency-avatar" style={{ background: ag.color }}>{ag.initials}</div>
+                  pendingSubmissions.map((s, i) => (
+                    <div key={s.id} className="cs-agency-row">
+                      <div
+                        className="cs-agency-avatar"
+                        style={{ background: AGENCY_COLORS[i % AGENCY_COLORS.length] }}
+                      >
+                        {getInitials(s.business_name || s.name)}
+                      </div>
                       <div className="cs-agency-info">
-                        <div className="cs-agency-name">{ag.name}</div>
-                        <div className="cs-agency-meta">Submitted {ag.submittedDate}</div>
+                        <div className="cs-agency-name">{s.business_name || s.name}</div>
+                        <div className="cs-agency-meta">
+                          {s.service_needed} · Submitted{' '}
+                          {new Date(s.created_at).toLocaleDateString()}
+                        </div>
                       </div>
                       <span className="cs-badge pending">Awaiting</span>
                     </div>
@@ -152,15 +278,22 @@ const ClientSettings = () => {
               <div className="cs-section">
                 <div className="cs-section-title">Rejected applications</div>
                 <div className="cs-section-desc">Agencies that declined your intake submission.</div>
-                {pendingAgencies.filter(a => a.status === 'rejected').length === 0 ? (
+                {submissionsLoading ? (
+                  <div className="cs-empty">Loading...</div>
+                ) : rejectedSubmissions.length === 0 ? (
                   <div className="cs-empty">No rejections</div>
                 ) : (
-                  pendingAgencies.filter(a => a.status === 'rejected').map(ag => (
-                    <div key={ag.id} className="cs-agency-row">
-                      <div className="cs-agency-avatar" style={{ background: ag.color }}>{ag.initials}</div>
+                  rejectedSubmissions.map((s, i) => (
+                    <div key={s.id} className="cs-agency-row">
+                      <div
+                        className="cs-agency-avatar"
+                        style={{ background: AGENCY_COLORS[i % AGENCY_COLORS.length] }}
+                      >
+                        {getInitials(s.business_name || s.name)}
+                      </div>
                       <div className="cs-agency-info">
-                        <div className="cs-agency-name">{ag.name}</div>
-                        <div className="cs-agency-meta">{ag.reason}</div>
+                        <div className="cs-agency-name">{s.business_name || s.name}</div>
+                        <div className="cs-agency-meta">{s.service_needed}</div>
                       </div>
                       <span className="cs-badge rejected">Rejected</span>
                     </div>
@@ -170,34 +303,18 @@ const ClientSettings = () => {
             </div>
           )}
 
-          {/* ── BILLING ── */}
           {activeTab === 'billing' && (
             <div className="cs-pane">
               <div className="cs-section">
                 <div className="cs-section-title">Payment history</div>
-                <div className="cs-section-desc">All invoices across your active agencies.</div>
-                <div className="cs-invoice-table">
-                  {[
-                    { agency: 'Atlas Sync', project: 'E-commerce Website', amount: '₦350,000', status: 'pending', date: 'Jun 10' },
-                    { agency: 'Pixel Forge', project: 'Brand Identity', amount: '₦180,000', status: 'paid', date: 'Jun 1' },
-                  ].map((inv, i) => (
-                    <div key={i} className="cs-invoice-row">
-                      <div className="cs-invoice-info">
-                        <div className="cs-invoice-name">{inv.agency}</div>
-                        <div className="cs-invoice-project">{inv.project} · {inv.date}</div>
-                      </div>
-                      <div className="cs-invoice-right">
-                        <div className="cs-invoice-amount">{inv.amount}</div>
-                        <span className={`cs-badge ${inv.status}`}>{inv.status === 'paid' ? 'Paid' : 'Pending'}</span>
-                      </div>
-                    </div>
-                  ))}
+                <div className="cs-section-desc">
+                  Invoice tracking isn't wired up yet — coming soon.
                 </div>
+                <div className="cs-empty">No invoices yet</div>
               </div>
             </div>
           )}
 
-          {/* ── DANGER ZONE ── */}
           {activeTab === 'danger' && (
             <div className="cs-pane">
               <div className="cs-section danger">
@@ -207,7 +324,9 @@ const ClientSettings = () => {
                     <div className="cs-danger-label">Leave an agency</div>
                     <div className="cs-danger-desc">Remove yourself from an active project. This cannot be undone.</div>
                   </div>
-                  <button className="cs-btn-danger">Leave agency</button>
+                  <button className="cs-btn-danger" disabled title="Coming soon">
+                    Leave agency
+                  </button>
                 </div>
                 <div className="cs-divider"></div>
                 <div className="cs-danger-row">
@@ -215,7 +334,9 @@ const ClientSettings = () => {
                     <div className="cs-danger-label">Delete account</div>
                     <div className="cs-danger-desc">Permanently delete your ATSYNC client account and all associated data.</div>
                   </div>
-                  <button className="cs-btn-danger">Delete account</button>
+                  <button className="cs-btn-danger" disabled title="Coming soon">
+                    Delete account
+                  </button>
                 </div>
               </div>
             </div>
