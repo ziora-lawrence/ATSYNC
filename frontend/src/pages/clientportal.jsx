@@ -113,6 +113,9 @@ const ClientPortal = () => {
   const [agencies, setAgencies] = useState([]); // shaped: { id (agency_client id), agency_id, name, initials, color, project }
   const [selectedAgencyClientId, setSelectedAgencyClientId] = useState(null);
   const [message, setMessage] = useState('');
+  const isMobile = () => window.innerWidth <= 768;
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(isMobile());
+  const [rightPanelOpen, setRightPanelOpen] = useState(!isMobile());
   const [agencyModal, setAgencyModal] = useState(null);
   const [profileModal, setProfileModal] = useState(false);
   const [avatarPopup, setAvatarPopup] = useState(false);
@@ -252,12 +255,32 @@ const ClientPortal = () => {
   return (
     <div className="cp-shell">
 
+      {/* Sidebar overlay backdrop for mobile */}
+      {(!leftPanelCollapsed || rightPanelOpen) && (
+        <div
+          className="cp-backdrop"
+          onClick={() => {
+            setLeftPanelCollapsed(true);
+            setRightPanelOpen(false);
+          }}
+        />
+      )}
+
       {/* ── LEFT PANEL ── */}
-      <div className="cp-left">
+      <div className={`cp-left ${leftPanelCollapsed ? 'collapsed' : ''}`}>
         <div className="cp-left-top">
-          <div className="cp-brand">
-            <span className="cp-brand-dot"></span>
-            ATSYNC
+          <div className="cp-left-header">
+            <div className="cp-brand">
+              <span className="cp-brand-dot"></span>
+              ATSYNC
+            </div>
+            <button
+              className="cp-left-close"
+              onClick={() => setLeftPanelCollapsed(true)}
+              title="Close panel"
+            >
+              <i className="ti ti-x"></i>
+            </button>
           </div>
           <div className="cp-section-label">Your agencies</div>
           <div className="cp-agency-list">
@@ -265,7 +288,10 @@ const ClientPortal = () => {
               <div
                 key={ag.id}
                 className={`cp-agency-item ${selectedAgencyClientId === ag.id ? 'active' : ''}`}
-                onClick={() => setSelectedAgencyClientId(ag.id)}
+                onClick={() => {
+                  setSelectedAgencyClientId(ag.id);
+                  if (isMobile()) setLeftPanelCollapsed(true);
+                }}
               >
                 <div className="cp-agency-row">
                   <div
@@ -322,18 +348,44 @@ const ClientPortal = () => {
       {/* ── MIDDLE PANEL — CHAT ── */}
       <div className="cp-mid">
         <div className="cp-mid-header">
-          <div
-            className="cp-mid-agency-avatar"
-            style={{ background: agency.color }}
-            onClick={() => setAgencyModal(agency)}
-          >
-            {agency.initials}
+          <div className="cp-header-left">
+            <button
+              className="cp-header-tog"
+              onClick={() => {
+                const nextState = !leftPanelCollapsed;
+                setLeftPanelCollapsed(nextState);
+                if (!nextState) setRightPanelOpen(false);
+              }}
+              title="Toggle agencies"
+            >
+              <i className="ti ti-menu-2"></i>
+            </button>
+            <div
+              className="cp-mid-agency-avatar"
+              style={{ background: agency.color }}
+              onClick={() => setAgencyModal(agency)}
+            >
+              {agency.initials}
+            </div>
+            <div>
+              <div className="cp-mid-agency-name">{agency.name}</div>
+              <div className="cp-mid-project-name">{project.name}</div>
+            </div>
           </div>
-          <div>
-            <div className="cp-mid-agency-name">{agency.name}</div>
-            <div className="cp-mid-project-name">{project.name}</div>
+          <div className="cp-header-right">
+            <div className="cp-mid-phase-badge">{project.phase}</div>
+            <button
+              className="cp-header-tog"
+              onClick={() => {
+                const nextState = !rightPanelOpen;
+                setRightPanelOpen(nextState);
+                if (nextState) setLeftPanelCollapsed(true);
+              }}
+              title="Toggle details"
+            >
+              <i className="ti ti-info-circle"></i>
+            </button>
           </div>
-          <div className="cp-mid-phase-badge">{project.phase}</div>
         </div>
 
         <div className="cp-chat-feed">
@@ -368,7 +420,16 @@ const ClientPortal = () => {
       </div>
 
       {/* ── RIGHT PANEL ── */}
-      <div className="cp-right">
+      <div className={`cp-right ${rightPanelOpen ? 'open' : 'collapsed'}`}>
+        <div className="cp-right-close-row">
+          <button
+            className="cp-right-close"
+            onClick={() => setRightPanelOpen(false)}
+            title="Close details"
+          >
+            <i className="ti ti-x"></i>
+          </button>
+        </div>
 
         {/* Project status */}
         <div className="cp-right-section">
