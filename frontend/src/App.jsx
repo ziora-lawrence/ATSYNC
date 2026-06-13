@@ -12,7 +12,10 @@ import Settings from './pages/settings';
 import ResetPassword from './pages/resetpassword';
 import Payments from './pages/payments';
 import IntakePortal from './pages/intakeportal'; 
+import ClientPortal from './pages/clientportal.jsx';
+import ClientSettings from './pages/clientsettings';
 import { supabase } from './lib/supabase';
+
 
 const App = () => {
   useEffect(() => {
@@ -63,7 +66,9 @@ const App = () => {
       <Route path="/" element={<Landingpage />} />
       <Route path="/agent-onboard" element={<Agentonboard />} />
       <Route path="/reset" element={<ResetPassword />} />
-      <Route path="/intake/:agencyId" element={<IntakePortal />} />  {/* ← moved outside */}
+      <Route path="/intake/:agencyId" element={<IntakePortal />} />
+      <Route path="/client/:clientId" element={<ClientPortal />} />
+      <Route path="/client/settings" element={<ClientSettings />} />
       
       {/* Nested Dashboard Center Routes */}
       <Route path="/dashboard" element={<DashboardLayout />}>
