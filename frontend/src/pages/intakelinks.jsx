@@ -19,6 +19,8 @@ export const IntakeLinks = () => {
 
   const [pendingSubmissions, setPendingSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(true);
+  // Track locally dismissed/removed row IDs
+  const [dismissedIds, setDismissedIds] = useState([]);
 
   // Fetch real pending intake submissions for this agency
   useEffect(() => {
@@ -27,6 +29,7 @@ export const IntakeLinks = () => {
       return;
     }
 
+  document.title = "ATSync | Intake Links";
     let isMounted = true;
 
     const fetchSubmissions = async () => {
@@ -43,10 +46,10 @@ export const IntakeLinks = () => {
         console.error('Error fetching intake submissions:', error);
         setPendingSubmissions([]);
       } else {
-        // Shape Supabase rows to match what this component (and handleApprove) expects
+        // Shape Supabase rows to match what this component expects
         const shaped = (data || []).map((row) => ({
           id: row.id,
-          type: row.status === 'approved' ? 'active' : 'pending',
+          type: row.status === 'approved' ? 'active' : row.status === 'rejected' ? 'rejected' : 'pending',
           name: row.business_name || row.name,
           contactName: row.name,
           email: row.email,
@@ -74,24 +77,17 @@ export const IntakeLinks = () => {
     triggerToast('Intake link copied to clipboard');
   };
 
-  const handleCopyInviteLink = (submissionId, clientName) => {
-    const inviteLink = `${window.location.origin}/client/signup?intake=${submissionId}`;
-    navigator.clipboard.writeText(inviteLink);
-    triggerToast(`Invite link for ${clientName} copied!`);
-  };
-
   // Mocked active clients (kept until real approval flow creates real clients)
   const activeClients = clients.filter(c => c.type === 'active');
 
-  // Only show real pending submissions that are still 'pending' status
-  const pendingFromSupabase = pendingSubmissions.filter(c => c.status === 'pending');
+  // Filter out any submissions that the agency chose to hide/remove locally
+  const visibleSupabaseSubmissions = pendingSubmissions.filter(c => !dismissedIds.includes(c.id));
 
-  // Combined list for the "Recent submissions" section
-  const combinedList = [...pendingFromSupabase, ...activeClients];
+  // Combined list displays everything loaded from Supabase alongside static active states
+  const combinedList = [...visibleSupabaseSubmissions, ...activeClients];
 
   const handleApprove = async (client) => {
     if (client.source === 'supabase') {
-      // Update status in Supabase
       const { error } = await supabase
         .from('intake_submissions')
         .update({ status: 'approved' })
@@ -103,23 +99,20 @@ export const IntakeLinks = () => {
         return;
       }
 
-      // Remove from local pending list (it's now 'approved')
+      // Update state so it toggles to 'approved' / 'active' inline without vanishing
       setPendingSubmissions(prev =>
         prev.map(c => (c.id === client.id ? { ...c, status: 'approved', type: 'active' } : c))
       );
 
       triggerToast(`${client.name} approved! Account invite pending.`);
       setNotificationsList(prev => [
-        { id: Date.now(), text: `${client.name} approved from intake. Invite flow not wired yet.`, read: false },
+        { id: Date.now(), text: `${client.name} approved from intake.`, read: false },
         ...prev
       ]);
-
-      // NOTE: email invite + account creation flow not built yet —
-      // for now this just flips status to 'approved' in Supabase.
       return;
     }
 
-    // --- Existing mocked-client approval logic (unchanged) ---
+    // --- Existing mocked-client approval logic ---
     setClients(prev => prev.map(c =>
       c.id !== client.id ? c : {
         ...c,
@@ -160,6 +153,37 @@ export const IntakeLinks = () => {
 
     setActiveClientId(client.id);
     navigate('/dashboard/clients');
+  };
+
+  const handleReject = async (client) => {
+    if (client.source === 'supabase') {
+      const { error } = await supabase
+        .from('intake_submissions')
+        .update({ status: 'rejected' })
+        .eq('id', client.id);
+
+      if (error) {
+        console.error('Error rejecting submission:', error);
+        triggerToast('Failed to reject — try again');
+        return;
+      }
+
+      // Flip status locally to keep it in the list with rejected attributes
+      setPendingSubmissions(prev =>
+        prev.map(c => (c.id === client.id ? { ...c, status: 'rejected', type: 'rejected' } : c))
+      );
+
+      triggerToast(`${client.name} submission rejected.`);
+      setNotificationsList(prev => [
+        { id: Date.now(), text: `${client.name} intake submission was rejected.`, read: false },
+        ...prev
+      ]);
+    }
+  };
+
+  const handleRemoveFromView = (id) => {
+    setDismissedIds(prev => [...prev, id]);
+    triggerToast('Submission removed from dashboard view');
   };
 
   const handleSendToMarket = (leadName) => {
@@ -266,8 +290,9 @@ export const IntakeLinks = () => {
             <div style={{ fontSize: '11px', color: 'var(--text-sec)' }}>No submissions yet</div>
           ) : (
             combinedList.map((c) => {
-              const isPending = c.type === 'pending';
-              const isActive = c.type === 'active';
+              const isPending = c.status === 'pending';
+              const isActive = c.status === 'approved' || c.type === 'active';
+              const isRejected = c.status === 'rejected';
 
               return (
                 <div key={c.id} className="alert-row">
@@ -281,35 +306,55 @@ export const IntakeLinks = () => {
                     )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className={`alert-badge ${isActive ? 'ready' : 'pending'}`}>
-                      {isActive ? 'Active' : 'Pending'}
+                    <span className={`alert-badge ${isActive ? 'ready' : isRejected ? 'overdue' : 'pending'}`}>
+                      {isActive ? 'Active' : isRejected ? 'Rejected' : 'Pending'}
                     </span>
-                    {isPending ? (
-                      <button
-                        className="row-btn"
-                        onClick={() => handleApprove(c)}
-                        type="button"
-                      >
-                        Approve
-                      </button>
-                    ) : c.source === 'supabase' && c.status === 'approved' ? (
-                      <button
-                        className="row-btn"
-                        onClick={() => handleCopyInviteLink(c.id, c.name)}
-                        type="button"
-                      >
-                        Copy invite link
-                      </button>
-                    ) : (
+                    
+                    {/* Actions for Pending Submissions */}
+                    {isPending && (
+                      <>
+                        <button
+                          className="row-btn"
+                          onClick={() => handleApprove(c)}
+                          type="button"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="row-btn"
+                          style={{ borderColor: 'rgba(255, 78, 78, 0.4)', color: 'var(--accent-red)' }}
+                          onClick={() => handleReject(c)}
+                          type="button"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+
+                    {/* Actions for Approved/Active Submissions */}
+                    {isActive && (
                       <button
                         className="row-btn"
                         onClick={() => {
-                          setActiveClientId(c.id);
+                          if (c.source !== 'supabase') {
+                            setActiveClientId(c.id);
+                          }
                           navigate('/dashboard/clients');
                         }}
                         type="button"
                       >
                         View Chat
+                      </button>
+                    )}
+
+                    {/* Actions for Rejected Submissions */}
+                    {isRejected && (
+                      <button
+                        className="row-btn"
+                        onClick={() => handleRemoveFromView(c.id)}
+                        type="button"
+                      >
+                        Remove
                       </button>
                     )}
                   </div>
@@ -318,7 +363,7 @@ export const IntakeLinks = () => {
             })
           )}
 
-          {/* Anon rejected lead */}
+          {/* Anon rejected lead (Chukwu Foods Hardcoded Row) */}
           <div className="alert-row">
             <div className="alert-info">
               <div className="alert-company">Chukwu Foods (Lead)</div>
