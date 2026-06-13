@@ -74,6 +74,12 @@ export const IntakeLinks = () => {
     triggerToast('Intake link copied to clipboard');
   };
 
+  const handleCopyInviteLink = (submissionId, clientName) => {
+    const inviteLink = `${window.location.origin}/client/signup?intake=${submissionId}`;
+    navigator.clipboard.writeText(inviteLink);
+    triggerToast(`Invite link for ${clientName} copied!`);
+  };
+
   // Mocked active clients (kept until real approval flow creates real clients)
   const activeClients = clients.filter(c => c.type === 'active');
 
@@ -285,6 +291,14 @@ export const IntakeLinks = () => {
                         type="button"
                       >
                         Approve
+                      </button>
+                    ) : c.source === 'supabase' && c.status === 'approved' ? (
+                      <button
+                        className="row-btn"
+                        onClick={() => handleCopyInviteLink(c.id, c.name)}
+                        type="button"
+                      >
+                        Copy invite link
                       </button>
                     ) : (
                       <button

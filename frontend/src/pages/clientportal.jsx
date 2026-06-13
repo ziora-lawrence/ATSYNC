@@ -1,77 +1,7 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import './clientportal.css';
-
-// ── Mocked Data ──────────────────────────────────────────────
-const mockClient = {
-  id: 'client-001',
-  name: 'Chidi Okeke',
-  initials: 'CO',
-};
-
-const mockAgencies = [
-  {
-    id: 'ag-1',
-    name: 'Atlas Sync',
-    initials: 'AS',
-    tagline: 'We build websites that work for you',
-    location: 'Ibadan, Nigeria',
-    socials: { twitter: '@atlassync', instagram: '@atlassync' },
-    color: '#6C47FF',
-    project: {
-      id: 'proj-1',
-      name: 'E-commerce Website',
-      phase: 'Phase 2 — Design',
-      progress: 45,
-      revisionsUsed: 1,
-      revisionsTotal: 3,
-      status: 'active',
-      tasks: [
-        { id: 1, text: 'Review homepage mockup', done: false, clientVisible: true },
-        { id: 2, text: 'Confirm brand colors', done: true, clientVisible: true },
-        { id: 3, text: 'Approve product page layout', done: false, clientVisible: true },
-      ],
-      pendingApprovals: [
-        { id: 'ap-1', title: 'Homepage Design v2', date: 'Jun 10', type: 'delivery' },
-      ],
-      invoice: { amount: '₦350,000', status: 'Pending', due: 'Jun 20' },
-    },
-    chat: [
-      { id: 1, from: 'agency', name: 'Atlas Sync', text: 'Hey Chidi! Homepage mockup is ready for your review.', time: '10:24 AM' },
-      { id: 2, from: 'client', name: 'Chidi', text: 'Looks great! Just one thing — can we make the hero section taller?', time: '10:31 AM' },
-      { id: 3, from: 'agency', name: 'Atlas Sync', text: "Sure, we'll update that and send a revised version by EOD.", time: '10:35 AM' },
-      { id: 4, from: 'client', name: 'Chidi', text: 'Perfect, thanks!', time: '10:36 AM' },
-    ],
-  },
-  {
-    id: 'ag-2',
-    name: 'Pixel Forge',
-    initials: 'PF',
-    tagline: 'Motion & brand design studio',
-    location: 'Lagos, Nigeria',
-    socials: { twitter: '@pixelforge', instagram: '@pixelforge.ng' },
-    color: '#0ea5e9',
-    project: {
-      id: 'proj-2',
-      name: 'Brand Identity Package',
-      phase: 'Phase 1 — Discovery',
-      progress: 20,
-      revisionsUsed: 0,
-      revisionsTotal: 2,
-      status: 'active',
-      tasks: [
-        { id: 1, text: 'Fill brand questionnaire', done: true, clientVisible: true },
-        { id: 2, text: 'Mood board approval', done: false, clientVisible: true },
-      ],
-      pendingApprovals: [],
-      invoice: { amount: '₦180,000', status: 'Paid', due: 'Jun 1' },
-    },
-    chat: [
-      { id: 1, from: 'agency', name: 'Pixel Forge', text: "Welcome Chidi! We've started on your brand discovery phase.", time: 'Jun 8' },
-      { id: 2, from: 'client', name: 'Chidi', text: 'Excited to see what you come up with!', time: 'Jun 8' },
-    ],
-  },
-];
 
 // ── Agency Profile Modal ──────────────────────────────────────
 const AgencyModal = ({ agency, onClose }) => (
@@ -85,21 +15,77 @@ const AgencyModal = ({ agency, onClose }) => (
       </div>
       <div className="cp-modal-name">{agency.name}</div>
       <div className="cp-modal-tag">{agency.tagline}</div>
-      <div className="cp-modal-location">
-        <i className="ti ti-map-pin"></i> {agency.location}
-      </div>
-      <div className="cp-modal-socials">
-        <span><i className="ti ti-brand-twitter"></i> {agency.socials.twitter}</span>
-        <span><i className="ti ti-brand-instagram"></i> {agency.socials.instagram}</span>
-      </div>
+      {agency.location && (
+        <div className="cp-modal-location">
+          <i className="ti ti-map-pin"></i> {agency.location}
+        </div>
+      )}
     </div>
   </div>
 );
 
+// ── Client Profile Modal ──────────────────────────────────────
+const ClientProfileModal = ({ client, onClose }) => {
+  const [name, setName] = useState(client?.user_metadata?.full_name || '');
+  const [saveState, setSaveState] = useState('idle'); // idle | saving | saved | error
+
+  const handleSave = async () => {
+    setSaveState('saving');
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: name.trim() },
+    });
+
+    if (error) {
+      console.error('Error updating profile:', error);
+      setSaveState('error');
+      return;
+    }
+
+    setSaveState('saved');
+  };
+
+  return (
+    <div className="cp-modal-backdrop" onClick={onClose}>
+      <div className="cp-modal" onClick={e => e.stopPropagation()}>
+        <button className="cp-modal-close" onClick={onClose}>
+          <i className="ti ti-x"></i>
+        </button>
+        <div className="cp-modal-avatar" style={{ background: '#6C47FF' }}>
+          {getInitials(name || client?.email?.split('@')[0] || '?')}
+        </div>
+        <div className="cp-modal-name">{name || 'Your name'}</div>
+        <div className="cp-modal-tag">{client?.email}</div>
+
+        <div className="cp-profile-field">
+          <label htmlFor="cp-profile-name">Full name</label>
+          <input
+            id="cp-profile-name"
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Enter your name"
+          />
+        </div>
+
+        {saveState === 'error' && (
+          <div className="cp-profile-error">Couldn't save — try again.</div>
+        )}
+        {saveState === 'saved' && (
+          <div className="cp-profile-saved">Saved!</div>
+        )}
+
+        <button className="cp-profile-save" onClick={handleSave} disabled={saveState === 'saving'}>
+          {saveState === 'saving' ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ── Avatar Popup ──────────────────────────────────────────────
-const AvatarPopup = ({ onClose, onSettings }) => (
+const AvatarPopup = ({ onViewProfile, onSettings }) => (
   <div className="cp-avatar-popup">
-    <div className="cp-avatar-popup-item" onClick={onClose}>
+    <div className="cp-avatar-popup-item" onClick={onViewProfile}>
       <i className="ti ti-user"></i> View Profile
     </div>
     <div className="cp-avatar-popup-item" onClick={onSettings}>
@@ -108,35 +94,160 @@ const AvatarPopup = ({ onClose, onSettings }) => (
   </div>
 );
 
+// Generate initials from a name
+const getInitials = (name = '') => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
+
+// Fallback colors cycled per agency
+const AGENCY_COLORS = ['#6C47FF', '#0ea5e9', '#1D9E75', '#f59e0b', '#ec4899'];
+
 // ── Main Component ────────────────────────────────────────────
 const ClientPortal = () => {
   const navigate = useNavigate();
-  const [selectedAgencyId, setSelectedAgencyId] = useState(mockAgencies[0].id);
-  const [message, setMessage] = useState('');
-  const [chats, setChats] = useState(
-    Object.fromEntries(mockAgencies.map(a => [a.id, a.chat]))
-  );
-  const [agencyModal, setAgencyModal] = useState(null);
-  const [avatarPopup, setAvatarPopup] = useState(false);
+  const { clientId } = useParams();
 
-  const agency = mockAgencies.find(a => a.id === selectedAgencyId);
-  const project = agency.project;
-  const currentChat = chats[selectedAgencyId] || [];
+  const [client, setClient] = useState(null);
+  const [agencies, setAgencies] = useState([]); // shaped: { id (agency_client id), agency_id, name, initials, color, project }
+  const [selectedAgencyClientId, setSelectedAgencyClientId] = useState(null);
+  const [message, setMessage] = useState('');
+  const [agencyModal, setAgencyModal] = useState(null);
+  const [profileModal, setProfileModal] = useState(false);
+  const [avatarPopup, setAvatarPopup] = useState(false);
+  const [loadState, setLoadState] = useState('loading'); // loading | ready | empty | error
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !userData?.user) {
+        console.error('Error getting user:', userError);
+        setLoadState('error');
+        return;
+      }
+
+      setClient(userData.user);
+
+      // Fetch agency_clients + agency profile + project, for this client
+      const { data, error } = await supabase
+        .from('agency_clients')
+        .select(`
+          id,
+          agency_id,
+          business_name,
+          profiles ( agency_name ),
+          projects ( id, name, phase, progress, revisions_used, revisions_total, status )
+        `)
+        .eq('client_id', userData.user.id);
+
+      if (error) {
+        console.error('Error fetching agency_clients:', error);
+        setLoadState('error');
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        setLoadState('empty');
+        return;
+      }
+
+      const shaped = data.map((row, idx) => {
+        const agencyName = row.profiles?.agency_name || row.business_name || 'Agency';
+        const project = Array.isArray(row.projects) ? row.projects[0] : row.projects;
+
+        return {
+          id: row.id, // agency_clients.id
+          agency_id: row.agency_id,
+          name: agencyName,
+          initials: getInitials(agencyName),
+          color: AGENCY_COLORS[idx % AGENCY_COLORS.length],
+          tagline: '',
+          location: '',
+          project: project
+            ? {
+                id: project.id,
+                name: project.name,
+                phase: project.phase,
+                progress: project.progress,
+                revisionsUsed: project.revisions_used,
+                revisionsTotal: project.revisions_total,
+                status: project.status,
+                tasks: [],
+                pendingApprovals: [],
+                invoice: null,
+              }
+            : {
+                id: null,
+                name: 'No project yet',
+                phase: 'Pending',
+                progress: 0,
+                revisionsUsed: 0,
+                revisionsTotal: 0,
+                status: 'pending',
+                tasks: [],
+                pendingApprovals: [],
+                invoice: null,
+              },
+        };
+      });
+
+      setAgencies(shaped);
+      setSelectedAgencyClientId(shaped[0].id);
+      setLoadState('ready');
+    };
+
+    fetchData();
+  }, [clientId]);
+
+  const agency = agencies.find(a => a.id === selectedAgencyClientId);
+  const project = agency?.project;
+
+  // Chat is still placeholder — messages table doesn't exist yet
+  const currentChat = [];
 
   const sendMessage = () => {
     if (!message.trim()) return;
-    const newMsg = {
-      id: Date.now(),
-      from: 'client',
-      name: mockClient.name,
-      text: message.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setChats(prev => ({ ...prev, [selectedAgencyId]: [...prev[selectedAgencyId], newMsg] }));
+    // TODO: wire to real messages table once built
     setMessage('');
   };
 
-  const progressColor = project.progress >= 75 ? '#1D9E75' : project.progress >= 40 ? '#0ea5e9' : '#6C47FF';
+  const progressColor =
+    project && project.progress >= 75
+      ? '#1D9E75'
+      : project && project.progress >= 40
+      ? '#0ea5e9'
+      : '#6C47FF';
+
+  if (loadState === 'loading') {
+    return (
+      <div className="cp-shell">
+        <div className="cp-loading">Loading your portal...</div>
+      </div>
+    );
+  }
+
+  if (loadState === 'error') {
+    return (
+      <div className="cp-shell">
+        <div className="cp-loading">
+          Couldn't load your portal. Try refreshing, or log in again.
+        </div>
+      </div>
+    );
+  }
+
+  if (loadState === 'empty') {
+    return (
+      <div className="cp-shell">
+        <div className="cp-loading">
+          You're not connected to any agencies yet. If you were just approved by an agency, use
+          the invite link they sent you to finish setup.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="cp-shell">
@@ -150,11 +261,11 @@ const ClientPortal = () => {
           </div>
           <div className="cp-section-label">Your agencies</div>
           <div className="cp-agency-list">
-            {mockAgencies.map(ag => (
+            {agencies.map(ag => (
               <div
                 key={ag.id}
-                className={`cp-agency-item ${selectedAgencyId === ag.id ? 'active' : ''}`}
-                onClick={() => setSelectedAgencyId(ag.id)}
+                className={`cp-agency-item ${selectedAgencyClientId === ag.id ? 'active' : ''}`}
+                onClick={() => setSelectedAgencyClientId(ag.id)}
               >
                 <div className="cp-agency-row">
                   <div
@@ -172,7 +283,7 @@ const ClientPortal = () => {
                   </div>
                   <div className={`cp-agency-dot ${ag.project.status}`}></div>
                 </div>
-                {selectedAgencyId === ag.id && (
+                {selectedAgencyClientId === ag.id && (
                   <div className="cp-project-pill">
                     <div className="cp-project-pill-bar">
                       <div
@@ -191,15 +302,17 @@ const ClientPortal = () => {
         {/* Bottom avatar */}
         <div className="cp-left-bottom">
           <div className="cp-client-avatar" onClick={() => setAvatarPopup(p => !p)}>
-            {mockClient.initials}
+            {getInitials(client?.user_metadata?.full_name || client?.email?.split('@')[0] || '?')}
           </div>
           <div className="cp-client-info">
-            <div className="cp-client-name">{mockClient.name}</div>
+            <div className="cp-client-name">
+              {client?.user_metadata?.full_name || client?.email}
+            </div>
             <div className="cp-client-role">Client</div>
           </div>
           {avatarPopup && (
             <AvatarPopup
-              onClose={() => setAvatarPopup(false)}
+              onViewProfile={() => { setAvatarPopup(false); setProfileModal(true); }}
               onSettings={() => navigate('/client/settings')}
             />
           )}
@@ -224,23 +337,31 @@ const ClientPortal = () => {
         </div>
 
         <div className="cp-chat-feed">
-          {currentChat.map(msg => (
-            <div key={msg.id} className={`cp-msg ${msg.from === 'client' ? 'mine' : 'theirs'}`}>
-              <div className="cp-msg-bubble">{msg.text}</div>
-              <div className="cp-msg-time">{msg.time}</div>
+          {currentChat.length === 0 ? (
+            <div className="cp-chat-empty">
+              No messages yet. Chat is coming soon — for now, your agency will reach out
+              directly.
             </div>
-          ))}
+          ) : (
+            currentChat.map(msg => (
+              <div key={msg.id} className={`cp-msg ${msg.from === 'client' ? 'mine' : 'theirs'}`}>
+                <div className="cp-msg-bubble">{msg.text}</div>
+                <div className="cp-msg-time">{msg.time}</div>
+              </div>
+            ))
+          )}
         </div>
 
         <div className="cp-chat-input-row">
           <input
             className="cp-chat-input"
-            placeholder="Message Atlas Sync..."
+            placeholder={`Message ${agency.name}...`}
             value={message}
             onChange={e => setMessage(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            disabled
           />
-          <button className="cp-send-btn" onClick={sendMessage}>
+          <button className="cp-send-btn" onClick={sendMessage} disabled>
             <i className="ti ti-send"></i>
           </button>
         </div>
@@ -269,7 +390,7 @@ const ClientPortal = () => {
         <div className="cp-right-section">
           <div className="cp-right-label">Revisions</div>
           <div className="cp-revision-row">
-            {Array.from({ length: project.revisionsTotal }).map((_, i) => (
+            {Array.from({ length: project.revisionsTotal || 0 }).map((_, i) => (
               <div
                 key={i}
                 className={`cp-revision-dot ${i < project.revisionsUsed ? 'used' : 'available'}`}
@@ -293,14 +414,18 @@ const ClientPortal = () => {
         <div className="cp-right-section">
           <div className="cp-right-label">Your tasks</div>
           <div className="cp-tasks-list">
-            {project.tasks.map(task => (
-              <div key={task.id} className={`cp-task-row ${task.done ? 'done' : ''}`}>
-                <div className={`cp-task-check ${task.done ? 'checked' : ''}`}>
-                  {task.done && <i className="ti ti-check"></i>}
+            {project.tasks.length === 0 ? (
+              <div className="cp-empty-note">No tasks yet</div>
+            ) : (
+              project.tasks.map(task => (
+                <div key={task.id} className={`cp-task-row ${task.done ? 'done' : ''}`}>
+                  <div className={`cp-task-check ${task.done ? 'checked' : ''}`}>
+                    {task.done && <i className="ti ti-check"></i>}
+                  </div>
+                  <span>{task.text}</span>
                 </div>
-                <span>{task.text}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -325,15 +450,19 @@ const ClientPortal = () => {
         {/* Invoice */}
         <div className="cp-right-section">
           <div className="cp-right-label">Invoice</div>
-          <div className="cp-invoice-row">
-            <div>
-              <div className="cp-invoice-amount">{project.invoice.amount}</div>
-              <div className="cp-invoice-due">Due {project.invoice.due}</div>
+          {project.invoice ? (
+            <div className="cp-invoice-row">
+              <div>
+                <div className="cp-invoice-amount">{project.invoice.amount}</div>
+                <div className="cp-invoice-due">Due {project.invoice.due}</div>
+              </div>
+              <span className={`cp-invoice-badge ${project.invoice.status.toLowerCase()}`}>
+                {project.invoice.status}
+              </span>
             </div>
-            <span className={`cp-invoice-badge ${project.invoice.status.toLowerCase()}`}>
-              {project.invoice.status}
-            </span>
-          </div>
+          ) : (
+            <div className="cp-empty-note">No invoice yet</div>
+          )}
         </div>
 
       </div>
@@ -341,6 +470,11 @@ const ClientPortal = () => {
       {/* Agency Modal */}
       {agencyModal && (
         <AgencyModal agency={agencyModal} onClose={() => setAgencyModal(null)} />
+      )}
+
+      {/* Client Profile Modal */}
+      {profileModal && (
+        <ClientProfileModal client={client} onClose={() => setProfileModal(false)} />
       )}
 
     </div>
