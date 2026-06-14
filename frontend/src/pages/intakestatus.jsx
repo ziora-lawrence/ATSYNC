@@ -9,7 +9,13 @@ export default function IntakeStatus() {
   const intakeId = searchParams.get('intake');
 
   const [submission, setSubmission] = useState(null);
-  const [loadState, setLoadState] = useState('loading'); // loading | ready | invalid
+  const [loadState, setLoadState] = useState('loading');
+
+  const [showSignIn, setShowSignIn] = useState(false);
+  const [signInEmail, setSignInEmail] = useState('');
+  const [signInPassword, setSignInPassword] = useState('');
+  const [signInState, setSignInState] = useState('idle');
+  const [signInError, setSignInError] = useState('');
 
   useEffect(() => {
     if (!intakeId) {
@@ -30,15 +36,75 @@ export default function IntakeStatus() {
       }
 
       setSubmission(data);
+      setSignInEmail(data.email || '');
       setLoadState('ready');
     };
 
     fetchSubmission();
-
-    // Poll every 30s so status updates without manual refresh
     const interval = setInterval(fetchSubmission, 30000);
     return () => clearInterval(interval);
   }, [intakeId]);
+
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    if (!signInPassword) {
+      setSignInError('Enter your password.');
+      setSignInState('error');
+      return;
+    }
+
+    setSignInState('loading');
+    setSignInError('');
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: signInEmail,
+      password: signInPassword,
+    });
+
+    if (error) {
+      setSignInError('Wrong password or account not found.');
+      setSignInState('error');
+      return;
+    }
+
+    const userId = data.user.id;
+
+    if (submission.status === 'approved') {
+      const { data: existing } = await supabase
+        .from('agency_clients')
+        .select('id')
+        .eq('agency_id', submission.agency_id)
+        .eq('client_id', userId)
+        .maybeSingle();
+
+      if (!existing) {
+        const { data: linkData } = await supabase
+          .from('agency_clients')
+          .insert({
+            agency_id: submission.agency_id,
+            client_id: userId,
+            business_name: submission.business_name || submission.name,
+            intake_id: submission.id,
+          })
+          .select()
+          .single();
+
+        if (linkData) {
+          await supabase.from('projects').insert({
+            agency_client_id: linkData.id,
+            name: submission.service_needed || 'New Project',
+          });
+        }
+      }
+
+      await supabase
+        .from('intake_submissions')
+        .update({ client_id: userId })
+        .eq('id', submission.id);
+    }
+
+    navigate(`/client/${userId}`);
+  };
 
   if (loadState === 'loading') {
     return (
@@ -69,7 +135,6 @@ export default function IntakeStatus() {
     <div className="is-page">
       <div className="is-card">
 
-        {/* Header */}
         <div className="is-header">
           <span className="is-logo">ATS<span className="is-logo-accent">YNC</span></span>
           <div className={`is-status-pill ${submission.status}`}>
@@ -79,7 +144,6 @@ export default function IntakeStatus() {
           </div>
         </div>
 
-        {/* Submission summary */}
         <div className="is-summary">
           <div className="is-summary-name">{submission.business_name || submission.name}</div>
           <div className="is-summary-email">{submission.email}</div>
@@ -114,14 +178,13 @@ export default function IntakeStatus() {
           </div>
         </div>
 
-        {/* Status message */}
         <div className={`is-message ${submission.status}`}>
           {isPending && (
             <>
               <div className="is-message-title">Your request is being reviewed</div>
               <div className="is-message-desc">
                 The agency will respond via email. Keep an eye on your inbox at <strong>{submission.email}</strong>.
-                This page updates automatically — you can bookmark it to check your status.
+                This page updates every 30 seconds — bookmark it to check back.
               </div>
             </>
           )}
@@ -129,8 +192,7 @@ export default function IntakeStatus() {
             <>
               <div className="is-message-title">You've been accepted!</div>
               <div className="is-message-desc">
-                Check your inbox at <strong>{submission.email}</strong> for an email from ATSYNC
-                with a link to set up your client account and access your project dashboard.
+                Set up your account to access your client portal and track your project.
               </div>
               <button
                 className="is-action-btn"
@@ -145,19 +207,59 @@ export default function IntakeStatus() {
               <div className="is-message-title">Your request wasn't accepted</div>
               <div className="is-message-desc">
                 Unfortunately the agency couldn't take on your project at this time.
-                You can reach out to them directly or try another agency.
               </div>
             </>
           )}
         </div>
 
-        {/* Already have account */}
         {(isPending || isApproved) && (
-          <div className="is-signin-hint">
-            Already have an account?{' '}
-            <span className="is-signin-link" onClick={() => navigate('/agent-onboard')}>
-              Sign in
-            </span>
+          <div className="is-signin-section">
+            {!showSignIn ? (
+              <div className="is-signin-hint">
+                Already have an account?{' '}
+                <span className="is-signin-link" onClick={() => setShowSignIn(true)}>
+                  Sign in
+                </span>
+              </div>
+            ) : (
+              <div className="is-signin-form">
+                <div className="is-signin-title">Sign in to your account</div>
+                <div className="is-field-inline">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    value={signInEmail}
+                    onChange={e => setSignInEmail(e.target.value)}
+                    placeholder="your@email.com"
+                  />
+                </div>
+                <div className="is-field-inline">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    value={signInPassword}
+                    onChange={e => setSignInPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                  />
+                </div>
+                {signInState === 'error' && (
+                  <div className="is-signin-error">{signInError}</div>
+                )}
+                <button
+                  className="is-action-btn"
+                  onClick={handleSignIn}
+                  disabled={signInState === 'loading'}
+                >
+                  {signInState === 'loading' ? 'Signing in...' : 'Sign in →'}
+                </button>
+                <div className="is-signin-hint" style={{ marginTop: '10px' }}>
+                  <span className="is-signin-link" onClick={() => setShowSignIn(false)}>
+                    Cancel
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
