@@ -57,7 +57,8 @@ export default function IntakePortal() {
     const serviceValue =
       form.service_needed === 'Other' ? form.service_other.trim() : form.service_needed;
 
-    const { data: insertData, error } = await supabase.from('intake_submissions').insert({
+    // Step 1: Insert without .select() — avoids RLS read-back issue for anon users
+    const { error } = await supabase.from('intake_submissions').insert({
       agency_id: agencyId,
       name: form.name.trim(),
       email: form.email.trim(),
@@ -67,7 +68,7 @@ export default function IntakePortal() {
       budget: form.budget.trim() || null,
       deadline: form.deadline || null,
       status: 'pending',
-    }).select();
+    });
 
     if (error) {
       console.error('Intake submission error:', error);
@@ -76,9 +77,24 @@ export default function IntakePortal() {
       return;
     }
 
+    // Step 2: Fetch the inserted row by email + agency_id to get its ID
+    const { data: fetched } = await supabase
+      .from('intake_submissions')
+      .select('id')
+      .eq('agency_id', agencyId)
+      .eq('email', form.email.trim())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
     setStatus('success');
-    const newIntakeId = insertData?.[0]?.id;
-    navigate(`/intake/status?intake=${newIntakeId}`);
+
+    if (fetched?.id) {
+      navigate(`/intake/status?intake=${fetched.id}`);
+    } else {
+      // Fallback — show inline success if we couldn't get the ID
+      // (status === 'success' renders the success screen below)
+    }
   };
 
   if (status === 'success') {
