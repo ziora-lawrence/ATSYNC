@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import './intakeportal.css';
 
@@ -15,6 +15,7 @@ const SERVICE_OPTIONS = [
 
 export default function IntakePortal() {
   const { agencyId } = useParams();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     name: '',
@@ -56,7 +57,7 @@ export default function IntakePortal() {
     const serviceValue =
       form.service_needed === 'Other' ? form.service_other.trim() : form.service_needed;
 
-    const { error } = await supabase.from('intake_submissions').insert({
+    const { data: insertData, error } = await supabase.from('intake_submissions').insert({
       agency_id: agencyId,
       name: form.name.trim(),
       email: form.email.trim(),
@@ -66,7 +67,7 @@ export default function IntakePortal() {
       budget: form.budget.trim() || null,
       deadline: form.deadline || null,
       status: 'pending',
-    });
+    }).select();
 
     if (error) {
       console.error('Intake submission error:', error);
@@ -76,6 +77,8 @@ export default function IntakePortal() {
     }
 
     setStatus('success');
+    const newIntakeId = insertData?.[0]?.id;
+    navigate(`/intake/status?intake=${newIntakeId}`);
   };
 
   if (status === 'success') {

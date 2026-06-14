@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import RightPanel from './RightPanel';
+import { supabase } from '../lib/supabase';
 
 export const Clients = () => {
   const {
@@ -20,6 +21,68 @@ export const Clients = () => {
     sidebarOpen,
     setSidebarOpen
   } = useOutletContext();
+
+  const [realClients, setRealClients] = useState([]);
+  const [realClientsLoading, setRealClientsLoading] = useState(true);
+
+  // Fetch real approved clients for this agency
+  useEffect(() => {
+    const fetchRealClients = async () => {
+      const user = JSON.parse(localStorage.getItem('atsync_user') || '{}');
+      const agencyId = user.agencyId;
+
+      if (!agencyId) {
+        setRealClientsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('agency_clients')
+        .select(`
+          id,
+          client_id,
+          business_name,
+          created_at,
+          projects ( id, name, phase, progress, revisions_used, revisions_total, status )
+        `)
+        .eq('agency_id', agencyId)
+        .eq('status', 'active');
+
+      if (error) {
+        console.error('Error fetching real clients:', error);
+        setRealClientsLoading(false);
+        return;
+      }
+
+      // Shape to match what the rest of this component expects
+      const shaped = (data || []).map((row, idx) => {
+        const project = Array.isArray(row.projects) ? row.projects[0] : row.projects;
+        return {
+          id: row.id, // agency_clients.id
+          client_id: row.client_id,
+          name: row.business_name || 'Client',
+          type: 'active',
+          statusDot: 'green',
+          service: project?.name || 'New Project',
+          budget: '—',
+          deadline: '—',
+          progress: project?.progress || 0,
+          alertBadge: null,
+          timeline: project ? [{ id: 1, title: project.phase, active: true, status: 'Active', progress: project.progress, date: '—' }] : [],
+          tasks: [],
+          chatLog: [],
+          scopeCreepLog: [],
+          source: 'supabase',
+          project: project || null,
+        };
+      });
+
+      setRealClients(shaped);
+      setRealClientsLoading(false);
+    };
+
+    fetchRealClients();
+  }, []);
 
   const [messageInput, setMessageInput] = useState('');
   const isMobile = () => window.innerWidth <= 768;
@@ -222,7 +285,7 @@ export const Clients = () => {
     triggerToast(`Phase "${phaseName}" added to timeline!`);
   };
 
-  if (loading) {
+  if (loading || realClientsLoading) {
     return (
       <div className="view" style={{ justifyContent: 'center', alignItems: 'center', color: 'var(--text-sec)' }}>
         <p>Loading client chat...</p>
@@ -230,7 +293,10 @@ export const Clients = () => {
     );
   }
 
-  const activeRoster = clients.filter(c => c.type === 'active');
+  const activeRoster = [
+    ...realClients.filter(c => c.type === 'active'),
+    ...clients.filter(c => c.type === 'active' && c.source !== 'supabase'),
+  ];
   const pendingRoster = clients.filter(c => c.type === 'pending');
 
   const getDotClass = (dot) => {
@@ -321,6 +387,13 @@ export const Clients = () => {
                 key={c.id}
                 className={`cl-item ${activeClient.id === c.id ? 'active' : ''}`}
                 onClick={() => {
+                  if (c.source === 'supabase') {
+                    setClients(prev => {
+                      const exists = prev.find(p => p.id === c.id);
+                      if (exists) return prev;
+                      return [...prev, c];
+                    });
+                  }
                   setActiveClientId(c.id);
                   if (isMobile()) setColListCollapsed(true);
                 }}
