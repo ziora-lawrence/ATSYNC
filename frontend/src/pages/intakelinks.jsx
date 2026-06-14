@@ -100,7 +100,23 @@ export const IntakeLinks = () => {
         prev.map(c => (c.id === client.id ? { ...c, status: 'approved', type: 'active' } : c))
       );
 
-      triggerToast(`${client.name} approved! Copy the invite link to proceed.`);
+      // Auto-send invite email via backend
+      try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL;
+        const res = await fetch(`${backendUrl}/api/auth/invite-client`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intakeId: client.id, agencyId }),
+        });
+        if (res.ok) {
+          triggerToast(`${client.name} approved! Invite email sent automatically.`);
+        } else {
+          triggerToast(`${client.name} approved! Email failed — use Copy Invite Link instead.`);
+        }
+      } catch (err) {
+        console.error('Invite email error:', err);
+        triggerToast(`${client.name} approved! Email failed — use Copy Invite Link instead.`);
+      }
       return;
     }
 
