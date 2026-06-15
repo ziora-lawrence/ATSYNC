@@ -100,18 +100,16 @@ export const IntakeLinks = () => {
         prev.map(c => (c.id === client.id ? { ...c, status: 'approved', type: 'active' } : c))
       );
 
-      // Auto-send invite email via backend
+      // Send invite via Supabase Edge Function (no Render/Resend needed)
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL;
-        const res = await fetch(`${backendUrl}/api/auth/invite-client`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ intakeId: client.id, agencyId }),
+        const { error: fnError } = await supabase.functions.invoke('send-invite', {
+          body: { intakeId: client.id, agencyId },
         });
-        if (res.ok) {
-          triggerToast(`${client.name} approved! Invite email sent automatically.`);
-        } else {
+        if (fnError) {
+          console.error('Invite error:', fnError);
           triggerToast(`${client.name} approved! Email failed — use Copy Invite Link instead.`);
+        } else {
+          triggerToast(`${client.name} approved! Invite email sent to ${client.email}.`);
         }
       } catch (err) {
         console.error('Invite email error:', err);

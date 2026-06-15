@@ -30,6 +30,7 @@ body { font-family: var(--cp-font); background: var(--cp-bg); color: var(--cp-te
 .cp-shell {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   background: var(--cp-bg);
@@ -823,4 +824,31 @@ body { font-family: var(--cp-font); background: var(--cp-bg); color: var(--cp-te
 @keyframes fadeInBackdrop {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+/* ── Mobile: pin chat input to bottom of real viewport ── */
+@media (max-width: 768px) {
+  .cp-chat-input-row {
+    position: sticky;
+    bottom: 0;
+    background: var(--cp-surface, #0f0f17);
+    z-index: 10;
+    /* Extra padding for iOS home bar */
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .cp-mid {
+    /* Ensure mid panel is a proper flex column that fills dvh */
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cp-chat-feed {
+    /* Feed must grow and scroll, not push input off screen */
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
 }
