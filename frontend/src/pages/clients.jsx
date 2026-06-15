@@ -25,6 +25,15 @@ export const Clients = () => {
   const [realClients, setRealClients] = useState([]);
   const [realClientsLoading, setRealClientsLoading] = useState(true);
 
+  // ── Real-time DB messages for Supabase clients ──
+  const [dbMessages, setDbMessages] = useState([]);
+  const [dbSending, setDbSending] = useState(false);
+
+  const formatTime = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   // Fetch real approved clients for this agency
   useEffect(() => {
     const fetchRealClients = async () => {
@@ -104,12 +113,58 @@ export const Clients = () => {
   const chatEndRef = useRef(null);
   const textareaRef = useRef(null);
 
+  // ── Fetch + subscribe to DB messages when selected Supabase client changes ──
+  useEffect(() => {
+    if (!activeClient?.id || activeClient?.source !== 'supabase') {
+      setDbMessages([]);
+      return;
+    }
+
+    setDbMessages([]);
+    const agencyClientId = activeClient.id;
+
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('agency_client_id', agencyClientId)
+        .order('created_at', { ascending: true });
+      if (!error && data) setDbMessages(data);
+    };
+    fetchMessages();
+
+    const channel = supabase
+      .channel(`agency-chat:${agencyClientId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `agency_client_id=eq.${agencyClientId}` },
+        (payload) => {
+          setDbMessages(prev => {
+            // Replace matching optimistic message or skip true duplicate
+            const optIdx = prev.findIndex(
+              m => String(m.id).startsWith('opt-') && m.content === payload.new.content && m.sender_role === payload.new.sender_role
+            );
+            if (optIdx !== -1) {
+              const next = [...prev];
+              next[optIdx] = payload.new;
+              return next;
+            }
+            if (prev.find(m => m.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [activeClient?.id, activeClient?.source]);
+
   // Auto-scroll to bottom of chat
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [activeClient?.chatLog]);
+  }, [activeClient?.chatLog, dbMessages]);
 
   // Auto-resize chat input textarea
   useEffect(() => {
@@ -122,60 +177,80 @@ export const Clients = () => {
 
   const hasClient = activeClient && activeClient.id;
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!messageInput.trim() || !hasClient) return;
 
+    const content = messageInput.trim();
+    setMessageInput('');
+
+    // ── Supabase client → real insert ──
+    if (activeClient.source === 'supabase') {
+      if (dbSending) return;
+      setDbSending(true);
+
+      const agencyUser = JSON.parse(localStorage.getItem('atsync_user') || '{}');
+      const optimistic = {
+        id: `opt-${Date.now()}`,
+        agency_client_id: activeClient.id,
+        sender_id: agencyUser.agencyId || 'agency',
+        sender_role: 'agency',
+        content,
+        created_at: new Date().toISOString(),
+      };
+      setDbMessages(prev => [...prev, optimistic]);
+
+      const { error } = await supabase.from('messages').insert({
+        agency_client_id: activeClient.id,
+        sender_id: agencyUser.agencyId || 'agency',
+        sender_role: 'agency',
+        content,
+      });
+
+      if (error) {
+        console.error('Send error:', error);
+        setDbMessages(prev => prev.filter(m => m.id !== optimistic.id));
+      }
+      setDbSending(false);
+      return;
+    }
+
+    // ── Mock client → local chatLog (existing behaviour) ──
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsg = {
       id: Date.now(),
       sender: 'agency',
       senderName: 'DANIEL',
       avatarInitials: 'DZ',
-      text: messageInput.trim(),
-      time: time,
+      text: content,
+      time,
     };
-
-    // Update client chat log
     setClients(prev => prev.map(c => {
       if (c.id !== activeClient.id) return c;
-      return {
-        ...c,
-        chatLog: [...(c.chatLog || []), userMsg]
-      };
+      return { ...c, chatLog: [...(c.chatLog || []), userMsg] };
     }));
 
-    const clientMsgText = messageInput.trim();
-    setMessageInput('');
-
-    // Simulate client response after 1.5 seconds
     setTimeout(() => {
       let clientResponseText = "Thanks for the update. Let me know when the next deliverable is ready for sign-off.";
-      
-      const lowerText = clientMsgText.toLowerCase();
-      if (lowerText.includes('price') || lowerText.includes('cost') || lowerText.includes('budget')) {
-        clientResponseText = `Yes, the budget of ${activeClient.budget} works for us. Let's make sure the deliverable covers all requirements.`;
-      } else if (lowerText.includes('timeline') || lowerText.includes('schedule') || lowerText.includes('delay')) {
+      const lower = content.toLowerCase();
+      if (lower.includes('price') || lower.includes('cost') || lower.includes('budget')) {
+        clientResponseText = `Yes, the budget of ${activeClient.budget} works for us.`;
+      } else if (lower.includes('timeline') || lower.includes('schedule') || lower.includes('delay')) {
         clientResponseText = "Regarding the timeline: let's align on this at the next design sync.";
-      } else if (lowerText.includes('approve') || lowerText.includes('sign off')) {
-        clientResponseText = "Excellent. We will look out for the approval request banner and approve it on our end.";
+      } else if (lower.includes('approve') || lower.includes('sign off')) {
+        clientResponseText = "Excellent. We will look out for the approval request banner.";
       }
-
       const clientMsg = {
         id: Date.now() + 1,
         sender: 'client',
         senderName: activeClient.name.toUpperCase(),
-        avatarInitials: activeClient.chatLog?.[0]?.avatarInitials || activeClient.name.split(' ').map(n => n[0]).join(''),
+        avatarInitials: activeClient.name.split(' ').map(n => n[0]).join(''),
         text: clientResponseText,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-
       setClients(prev => prev.map(c => {
         if (c.id !== activeClient.id) return c;
-        return {
-          ...c,
-          chatLog: [...(c.chatLog || []), clientMsg]
-        };
+        return { ...c, chatLog: [...(c.chatLog || []), clientMsg] };
       }));
     }, 1500);
   };
@@ -442,6 +517,24 @@ export const Clients = () => {
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-sec)', fontSize: '13px' }}>
                 Select an active client from the roster to view communication
               </div>
+            ) : activeClient.source === 'supabase' ? (
+              dbMessages.length === 0 ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-sec)', fontSize: '12px' }}>
+                  No messages yet. Send the first message to {activeClient.name}.
+                </div>
+              ) : (
+                dbMessages.map((msg) => {
+                  const isAgency = msg.sender_role === 'agency';
+                  return (
+                    <div key={msg.id} className={`msg ${isAgency ? 'agency' : 'client'}`}>
+                      <div className="msg-bub">{msg.content}</div>
+                      <div className="msg-stamp">
+                        {isAgency ? 'You' : activeClient.name} · {formatTime(msg.created_at)}
+                      </div>
+                    </div>
+                  );
+                })
+              )
             ) : (!activeClient.chatLog || activeClient.chatLog.length === 0) ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-sec)', fontSize: '12px' }}>
                 No message logs yet. Send a message to get started.

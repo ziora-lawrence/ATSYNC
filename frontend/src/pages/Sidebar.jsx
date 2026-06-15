@@ -84,16 +84,6 @@ export const Sidebar = ({
         </Link>
         
         <Link
-          to="/dashboard/chat"
-          className={`ni ${isNavActive('/dashboard/chat') ? 'active' : ''}`}
-          title="Messages"
-          onClick={handleNavClick}
-        >
-          <i className="ti ti-message-2"></i>
-          <span className="ni-label">Messages</span>
-        </Link>
-
-        <Link
           to="/dashboard/payments"
           className={`ni ${isNavActive('/dashboard/payments') ? 'active' : ''}`}
           title="Payments"

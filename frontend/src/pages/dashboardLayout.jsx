@@ -218,7 +218,6 @@ const DashboardLayout = () => {
     if (path.startsWith('/dashboard/bob')) return 'Bob (preview)';
     if (path.startsWith('/dashboard/marketplace')) return 'Marketplace';
     if (path.startsWith('/dashboard/settings')) return 'Settings';
-    if (path.startsWith('/dashboard/chat')) return 'Messages';
     return 'ATSYNC';
   };
 

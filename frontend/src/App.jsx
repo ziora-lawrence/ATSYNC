@@ -16,7 +16,6 @@ import ClientPortal from './pages/clientportal.jsx';
 import ClientSettings from './pages/clientsettings';
 import ClientSignup from './pages/clientsignup';
 import IntakeStatus from './pages/intakestatus';
-import AgencyChat from './pages/agencychat.jsx'
 import { supabase } from './lib/supabase';
 
 
@@ -75,7 +74,6 @@ const App = () => {
         <Route path="bob" element={<Bob />} />
         <Route path="marketplace" element={<Marketplace />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="chat" element={<AgencyChat />} />
       </Route>
     </Routes>
   );
