@@ -3,14 +3,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export const Sidebar = ({
-  clients = [],
-  activeClientId,
-  pendingIntakeCount,
-  loading,
-  onClientClick,
+  clients: _clients = [],
+  activeClientId: _activeClientId,
+  pendingIntakeCount: _pendingIntakeCount,
+  loading: _loading,
+  onClientClick: _onClientClick,
   sidebarOpen,
   setSidebarOpen,
-  onAddClientClick
+  onAddClientClick: _onAddClientClick
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -81,6 +81,16 @@ export const Sidebar = ({
         >
           <i className="ti ti-users"></i>
           <span className="ni-label">Clients</span>
+        </Link>
+        
+        <Link
+          to="/dashboard/chat"
+          className={`ni ${isNavActive('/dashboard/chat') ? 'active' : ''}`}
+          title="Messages"
+          onClick={handleNavClick}
+        >
+          <i className="ti ti-message-2"></i>
+          <span className="ni-label">Messages</span>
         </Link>
 
         <Link

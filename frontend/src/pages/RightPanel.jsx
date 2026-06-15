@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export const RightPanel = ({
-  loading,
+  loading: _loading,
   activeClient = {},
   rightPanelTab,
   setRightPanelTab,
@@ -9,7 +9,7 @@ export const RightPanel = ({
   setTaskNameInput,
   onToggleTask,
   onAddTask,
-  onApproveIntake,
+  onApproveIntake: _onApproveIntake,
   onToggleBriefLock,
   onAddPhase,
   setRightPanelOpen,
@@ -25,7 +25,7 @@ export const RightPanel = ({
     return 'good';
   };
 
-  const getProgressColorClass = (sentiment) => {
+  const _getProgressColorClass = (sentiment) => {
     if (sentiment < 60) return 'red';
     if (sentiment < 80) return 'amb';
     return '';
