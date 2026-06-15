@@ -95,36 +95,36 @@ const CursorGlow = () => {
 
 const faqs = [
   {
-    question: "Do my clients need to download anything?",
-    answer: "No, clients do not need to download any app. Bob integrates seamlessly with their existing platforms.",
+    question: "How do my clients access their portal?",
+    answer: "Share your unique ATSYNC intake link with a client. They fill a short form, you approve them with one click, and they automatically receive an invite email with a link to set up their account. That's it — no manual setup on your end.",
   },
   {
-    question: "What happens to my existing clients on WhatsApp?",
-    answer: "You can easily transition them by sharing your unique ATSYNC portal link, or Bob can handle the handoff.",
+    question: "Do clients need to create an account?",
+    answer: "Yes, but it's seamless. After you approve their intake submission, ATSYNC sends them a magic link via email. They click it, set a password, and they're inside their personal client portal instantly.",
   },
   {
-    question: "Is Bob actually AI or just automated templates?",
-    answer: "Bob is a true AI. He understands context, answers questions dynamically, and adapts to client needs.",
+    question: "Can I manage multiple clients at once?",
+    answer: "Absolutely. Your agency dashboard shows all your clients in one place — their project phase, progress, revision count, and a direct chat channel with each of them. Switch between clients in one click.",
   },
   {
-    question: "What if a client refuses to leave WhatsApp?",
-    answer: "Bob can be configured to interact via WhatsApp, keeping their experience familiar while you manage it centrally.",
+    question: "What happens after I approve a client?",
+    answer: "Two things happen automatically: the intake submission is marked approved in your dashboard, and an invite email is sent to the client with a link to create their account. Once they sign up, they land directly in their client portal showing your agency and their project.",
   },
   {
-    question: "How long does setup take?",
-    answer: "Setup takes less than 5 minutes. Just define your services, pricing, and Bob's tone.",
+    question: "Can my clients see each other?",
+    answer: "Never. Every client only ever sees their own portal — their project, their files, and their chat with your agency. Full data isolation between clients.",
   },
   {
-    question: "What happens if a client wants to change the project brief?",
-    answer: "Bob will capture the change request and notify you for approval before updating the project scope.",
+    question: "What is ATSYNC actually replacing?",
+    answer: "The WhatsApp group, the Google Sheet tracker, the random email threads, the forgotten follow-ups, and the voice note updates. ATSYNC gives your clients one clean portal and gives you one clean dashboard instead of all of that.",
   },
   {
-    question: "Is my client data safe?",
-    answer: "Yes, we use bank-level encryption to ensure all client data and project details remain secure and private.",
+    question: "How does the chat work?",
+    answer: "Each client has a dedicated message thread with your agency. Messages are real-time — both sides see new messages instantly without refreshing. The agency sees all client chats in one place; each client only sees their own.",
   },
   {
-    question: "Can I cancel anytime?",
-    answer: "Absolutely. You can cancel your subscription at any time with no hidden fees.",
+    question: "Is there a limit on clients for the free plan?",
+    answer: "The free Starter plan supports up to 3 active projects. Need more? The Pro plan (coming soon) removes all limits.",
   },
 ];
 
@@ -185,7 +185,7 @@ const Landingpage = () => {
   const statsRef = useRef(null);
   const statsAnimated = useRef(false);
   const [headline, setHeadline] = useState("");
-  const fullHeadline = "Focus on Creating Leave the rest to Bob";
+  const fullHeadline = "Stop Managing Clients on WhatsApp.";
 
   const navigate = useNavigate();
 
@@ -317,8 +317,8 @@ const Landingpage = () => {
       if (!agencyEmail.trim()) { seterror("Email cannot be empty"); setIsAuthLoading(false); return; }
       if (!agencyPass.trim()) { seterror("Password cannot be empty"); setIsAuthLoading(false); return; }
 
-      // Staff must provide an agency ID (clients don't — we look it up)
-      if (loginRole === "staff" && !agencyId.trim()) {
+      // Staff/client must provide an agency ID
+      if ((loginRole === "staff" || loginRole === "client") && !agencyId.trim()) {
         seterror("Please enter your Agency ID");
         setIsAuthLoading(false);
         return;
@@ -354,21 +354,8 @@ const Landingpage = () => {
             // Verify staff belongs to the agency and navigate to workspace
             navigate(`/workspace/${agencyId.trim()}`);
           } else if (loginRole === "client") {
-            // Look up their agency_clients record — no Agency ID needed
-            const { data: acData, error: acError } = await supabase
-              .from("agency_clients")
-              .select("id")
-              .eq("client_id", data.user.id)
-              .limit(1)
-              .single();
-
-            if (acError || !acData) {
-              seterror("No agency found for this account. Contact your agency.");
-              setIsAuthLoading(false);
-              return;
-            }
-
-            navigate(`/client/${acData.id}`);
+            // Navigate client to their specific agency portal
+            navigate(`/client-portal/${agencyId.trim()}`);
           }
         }
       } catch {
@@ -606,7 +593,7 @@ const Landingpage = () => {
                 )}
 
                 {/* ── Agency ID for staff and clients ── */}
-                {isLogin && loginRole === "staff" && (
+                {isLogin && (loginRole === "staff" || loginRole === "client") && (
                   <div className="agency-id-field">
                     <div className="agency-id-label">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -747,8 +734,8 @@ const Landingpage = () => {
           </h1>
 
           <p className="hero-subtext">
-            ATSYNC gives your agency an AI that onboards clients, sends updates,
-            and handles follow-ups automatically.
+            One link replaces your entire client WhatsApp chaos. Share your intake link,
+            approve clients in one click, and manage everything from a single dashboard.
           </p>
 
           <div className="hero-ctas">
@@ -803,13 +790,13 @@ const Landingpage = () => {
           <div className="features-left animate-on-scroll">
             <span className="section-label">HOW IT WORKS</span>
             <h2>
-              Three simple steps.
+              Up and running
               <br />
-              <span className="gradient-text">Zero WhatsApp chaos.</span>
+              <span className="gradient-text">in three steps.</span>
             </h2>
             <p className="features-desc">
-              Bob, your AI, does the heavy lifting so you can focus on what you
-              do best — creating great work.
+              No complicated setup. No developer needed. You can onboard your
+              first client in under 10 minutes.
             </p>
           </div>
 
@@ -817,10 +804,10 @@ const Landingpage = () => {
             <div className="step-card animate-on-scroll" style={{ transitionDelay: "0.1s" }}>
               <div className="step-num" aria-hidden="true">01</div>
               <div className="step-content">
-                <h3>Set up your agency profile</h3>
+                <h3>Create your agency account</h3>
                 <p>
-                  Tell Bob about your services, pricing, and tone of voice. Setup
-                  takes less than 5 minutes.
+                  Sign up, complete your agency profile, and your personalised
+                  intake link is ready instantly — no setup calls, no waiting.
                 </p>
               </div>
             </div>
@@ -828,10 +815,11 @@ const Landingpage = () => {
             <div className="step-card animate-on-scroll" style={{ transitionDelay: "0.25s" }}>
               <div className="step-num" aria-hidden="true">02</div>
               <div className="step-content">
-                <h3>Share your client intake link</h3>
+                <h3>Share your intake link</h3>
                 <p>
-                  Send your unique ATSYNC portal link to new leads instead of
-                  chatting on WhatsApp.
+                  Send one link to a new client. They fill a short form with
+                  their project details, budget, and deadline — no WhatsApp
+                  back-and-forth required.
                 </p>
               </div>
             </div>
@@ -839,12 +827,56 @@ const Landingpage = () => {
             <div className="step-card animate-on-scroll" style={{ transitionDelay: "0.4s" }}>
               <div className="step-num" aria-hidden="true">03</div>
               <div className="step-content">
-                <h3>Bob handles the rest</h3>
+                <h3>Approve and they're in</h3>
                 <p>
-                  Bob collects project briefs, answers questions, and sets up
-                  your dashboard automatically.
+                  Review the submission, click Approve, and ATSYNC automatically
+                  sends your client an invite. They land in a clean portal
+                  showing their project, progress, and a direct line to you.
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════ FEATURES SHOWCASE ════════════════════ */}
+      <section className="showcase-section" id="features">
+        <div className="showcase-inner">
+          <div className="showcase-header animate-on-scroll">
+            <span className="section-label">WHAT YOU GET</span>
+            <h2>Everything your agency needs.<br /><span className="gradient-text">Nothing you don't.</span></h2>
+            <p className="showcase-sub">Built specifically for African creative agencies managing client relationships.</p>
+          </div>
+          <div className="showcase-grid">
+            <div className="showcase-card animate-on-scroll" style={{ transitionDelay: "0.05s" }}>
+              <div className="showcase-icon">⚡</div>
+              <div className="showcase-card-title">Instant client portals</div>
+              <div className="showcase-card-desc">Every approved client gets their own portal showing their project phase, progress bar, revision count, and invoice status — updated in real time.</div>
+            </div>
+            <div className="showcase-card animate-on-scroll" style={{ transitionDelay: "0.1s" }}>
+              <div className="showcase-icon">💬</div>
+              <div className="showcase-card-title">Real-time messaging</div>
+              <div className="showcase-card-desc">A dedicated chat channel between you and each client. No group chats, no crossed wires. Messages arrive instantly on both sides.</div>
+            </div>
+            <div className="showcase-card animate-on-scroll" style={{ transitionDelay: "0.15s" }}>
+              <div className="showcase-icon">📋</div>
+              <div className="showcase-card-title">Intake management</div>
+              <div className="showcase-card-desc">New leads fill your intake form and land in a submissions queue. Approve with one click and the invite goes out automatically — no copy-pasting links.</div>
+            </div>
+            <div className="showcase-card animate-on-scroll" style={{ transitionDelay: "0.2s" }}>
+              <div className="showcase-icon">✅</div>
+              <div className="showcase-card-title">Approval flows</div>
+              <div className="showcase-card-desc">Send deliverables for client sign-off directly from the dashboard. Clients approve or request changes in one tap — all tracked with a full paper trail.</div>
+            </div>
+            <div className="showcase-card animate-on-scroll" style={{ transitionDelay: "0.25s" }}>
+              <div className="showcase-icon">🔁</div>
+              <div className="showcase-card-title">Revision tracking</div>
+              <div className="showcase-card-desc">Set revision limits per project. ATSYNC tracks how many have been used and flags scope creep automatically so you never work for free again.</div>
+            </div>
+            <div className="showcase-card animate-on-scroll" style={{ transitionDelay: "0.3s" }}>
+              <div className="showcase-icon">🔒</div>
+              <div className="showcase-card-title">Full data isolation</div>
+              <div className="showcase-card-desc">Each client only ever sees their own portal. No client can see another's project, messages, or data — complete privacy by default.</div>
             </div>
           </div>
         </div>
@@ -941,6 +973,29 @@ const Landingpage = () => {
             <p>Talk to us directly. We respond within 24 hours.</p>
             <button className="contact-btn" onClick={() => setShowContactModal(true)}>
               Contact Us
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════ FINAL CTA ════════════════════ */}
+      <section className="final-cta-section">
+        <div className="final-cta-inner animate-on-scroll">
+          <div className="final-cta-badge">Free to start · No credit card required</div>
+          <h2 className="final-cta-headline">
+            Ready to stop managing<br />
+            <span className="gradient-text">clients on WhatsApp?</span>
+          </h2>
+          <p className="final-cta-sub">
+            Create your agency account in under 2 minutes and share your first
+            intake link today.
+          </p>
+          <div className="final-cta-btns">
+            <button className="cta-primary" onClick={() => setShowLogin(true)}>
+              <span>Create free account</span>
+            </button>
+            <button className="cta-secondary" onClick={() => setShowWaitlist(true)}>
+              Join waitlist instead
             </button>
           </div>
         </div>
