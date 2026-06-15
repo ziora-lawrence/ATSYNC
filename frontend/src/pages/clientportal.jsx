@@ -214,7 +214,18 @@ const ClientPortal = () => {
         },
         (payload) => {
           setMessages(prev => {
-            // avoid duplicates if our own insert already added it
+            // Replace matching optimistic message (same content + role) with real DB row
+            const optIdx = prev.findIndex(
+              m => String(m.id).startsWith('opt-') &&
+                   m.content === payload.new.content &&
+                   m.sender_role === payload.new.sender_role
+            );
+            if (optIdx !== -1) {
+              const next = [...prev];
+              next[optIdx] = payload.new;
+              return next;
+            }
+            // Skip true duplicates (shouldn't happen, but guard anyway)
             if (prev.find(m => m.id === payload.new.id)) return prev;
             return [...prev, payload.new];
           });
