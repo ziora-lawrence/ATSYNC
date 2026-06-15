@@ -115,6 +115,11 @@ const ClientSettings = () => {
     setNewPassword('');
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
   const pendingSubmissions = submissions.filter(s => s.status === 'pending');
   const rejectedSubmissions = submissions.filter(s => s.status === 'rejected');
 
@@ -207,6 +212,13 @@ const ClientSettings = () => {
                   disabled={passwordSaveState === 'saving'}
                 >
                   {passwordSaveState === 'saving' ? 'Updating...' : 'Update password'}
+                </button>
+              </div>
+              <div className="cs-section">
+                <div className="cs-section-title">Session</div>
+                <div className="cs-section-desc">You are currently signed in as {client?.email}.</div>
+                <button className="cs-btn-logout" onClick={handleLogout}>
+                  <i className="ti ti-logout"></i> Sign out
                 </button>
               </div>
             </div>

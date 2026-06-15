@@ -317,8 +317,8 @@ const Landingpage = () => {
       if (!agencyEmail.trim()) { seterror("Email cannot be empty"); setIsAuthLoading(false); return; }
       if (!agencyPass.trim()) { seterror("Password cannot be empty"); setIsAuthLoading(false); return; }
 
-      // Staff/client must provide an agency ID
-      if ((loginRole === "staff" || loginRole === "client") && !agencyId.trim()) {
+      // Staff must provide an agency ID (clients don't — we look it up)
+      if (loginRole === "staff" && !agencyId.trim()) {
         seterror("Please enter your Agency ID");
         setIsAuthLoading(false);
         return;
@@ -354,8 +354,21 @@ const Landingpage = () => {
             // Verify staff belongs to the agency and navigate to workspace
             navigate(`/workspace/${agencyId.trim()}`);
           } else if (loginRole === "client") {
-            // Navigate client to their specific agency portal
-            navigate(`/client-portal/${agencyId.trim()}`);
+            // Look up their agency_clients record — no Agency ID needed
+            const { data: acData, error: acError } = await supabase
+              .from("agency_clients")
+              .select("id")
+              .eq("client_id", data.user.id)
+              .limit(1)
+              .single();
+
+            if (acError || !acData) {
+              seterror("No agency found for this account. Contact your agency.");
+              setIsAuthLoading(false);
+              return;
+            }
+
+            navigate(`/client/${acData.id}`);
           }
         }
       } catch {
@@ -593,7 +606,7 @@ const Landingpage = () => {
                 )}
 
                 {/* ── Agency ID for staff and clients ── */}
-                {isLogin && (loginRole === "staff" || loginRole === "client") && (
+                {isLogin && loginRole === "staff" && (
                   <div className="agency-id-field">
                     <div className="agency-id-label">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
