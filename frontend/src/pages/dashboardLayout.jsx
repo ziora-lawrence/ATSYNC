@@ -28,7 +28,7 @@ const DashboardLayout = () => {
 
   // ─── Add Client modal states ─────────────────────────────────────────────────
   const [modalMethod, setModalMethod] = useState('link');
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [_linkCopied, setLinkCopied] = useState(false);
   const [newClient, setNewClient] = useState({
     name: '', company: '', email: '', phone: '', service: '', budget: '', deadline: '',
     type: 'active', statusDot: 'green', alertBadge: 'ready',
@@ -218,6 +218,7 @@ const DashboardLayout = () => {
     if (path.startsWith('/dashboard/bob')) return 'Bob (preview)';
     if (path.startsWith('/dashboard/marketplace')) return 'Marketplace';
     if (path.startsWith('/dashboard/settings')) return 'Settings';
+    if (path.startsWith('/dashboard/chat')) return 'Messages';
     return 'ATSYNC';
   };
 

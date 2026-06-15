@@ -7,9 +7,9 @@ export const IntakeLinks = () => {
   const {
     clients = [],
     setClients,
-    loading,
+    loading: _loading,
     triggerToast,
-    setNotificationsList,
+    setNotificationsList: _setNotificationsList,
     setActiveClientId,
   } = useOutletContext();
 
@@ -157,7 +157,7 @@ export const IntakeLinks = () => {
     triggerToast(`Lead "${leadName}" sent to the ATSYNC Marketplace!`);
   };
 
-  const allScopeLogs = clients.reduce((acc, c) => {
+  const _allScopeLogs = clients.reduce((acc, c) => {
     if (c.scopeCreepLog) {
       c.scopeCreepLog.forEach(log => acc.push({ clientName: c.name, ...log }));
     }

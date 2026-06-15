@@ -13,13 +13,13 @@ export const Clients = () => {
     triggerToast,
     setNotificationsList,
     handleToggleTask,
-    handleAddTask,
+    handleAddTask: _handleAddTask,
     handleApproveIntake,
     handleToggleBriefLock,
     setIsModalOpen,
     setModalMethod,
-    sidebarOpen,
-    setSidebarOpen
+    sidebarOpen: _sidebarOpen,
+    setSidebarOpen: _setSidebarOpen
   } = useOutletContext();
 
   const [realClients, setRealClients] = useState([]);
@@ -55,7 +55,7 @@ export const Clients = () => {
       }
 
       // Shape to match what the rest of this component expects
-      const shaped = (data || []).map((row, idx) => {
+      const shaped = (data || []).map((row, _idx) => {
         const project = Array.isArray(row.projects) ? row.projects[0] : row.projects;
         return {
           id: row.id, // agency_clients.id
@@ -180,7 +180,7 @@ export const Clients = () => {
     }, 1500);
   };
 
-  const handleOpenApprovalModal = () => {
+  const _handleOpenApprovalModal = () => {
     setApprovalRequestText(`Approval request for ${activeClient.service || 'deliverables'}`);
     setIsApprovalOpen(true);
   };
