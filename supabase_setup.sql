@@ -122,3 +122,103 @@ create policy "Anon can count agent profiles"
   on public.agent_profiles for select
   using (true);
 
+-- 4. APPROVALS TABLE
+create table if not exists public.approvals (
+  id               uuid primary key default gen_random_uuid(),
+  agency_client_id uuid not null references public.agency_clients(id) on delete cascade,
+  project_id       uuid references public.projects(id) on delete cascade,
+  type             text not null check (type in ('delivery_approval', 'change_request', 'scope_creep_flag')),
+  title            text not null,
+  description      text,
+  status           text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  requested_by     uuid references auth.users(id),
+  requested_at     timestamptz default now(),
+  resolved_at      timestamptz
+);
+
+alter table public.approvals enable row level security;
+
+drop policy if exists "Conversation members can read approvals" on public.approvals;
+create policy "Conversation members can read approvals"
+  on public.approvals for select
+  using (
+    exists (
+      select 1 from public.agency_clients ac
+      where ac.id = approvals.agency_client_id
+        and (ac.agency_id = auth.uid() or ac.client_id = auth.uid())
+    )
+  );
+
+drop policy if exists "Agency can create approvals" on public.approvals;
+create policy "Agency can create approvals"
+  on public.approvals for insert
+  with check (
+    exists (
+      select 1 from public.agency_clients ac
+      where ac.id = approvals.agency_client_id and ac.agency_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Client can update approval status" on public.approvals;
+create policy "Client can update approval status"
+  on public.approvals for update
+  using (
+    exists (
+      select 1 from public.agency_clients ac
+      where ac.id = approvals.agency_client_id and ac.client_id = auth.uid()
+    )
+  );
+
+-- 5. PAYMENTS TABLE
+create table if not exists public.payments (
+  id                   uuid primary key default gen_random_uuid(),
+  agency_client_id     uuid not null references public.agency_clients(id) on delete cascade,
+  project_id           uuid references public.projects(id) on delete cascade,
+  approval_id          uuid references public.approvals(id) on delete set null,
+  amount               numeric not null,
+  currency             text default 'NGN',
+  status               text not null default 'pending' check (status in ('pending', 'paid', 'failed')),
+  paystack_reference   text unique,
+  paystack_access_code text,
+  description          text,
+  created_at           timestamptz default now(),
+  paid_at              timestamptz
+);
+
+alter table public.payments enable row level security;
+
+-- NOTE: Approval-triggered rule enforced in application logic (payments.js /initiate)
+-- rather than a DB constraint, because cross-table status checks in Postgres
+-- require triggers which add complexity. The Express route verifies approval.status = 'approved'
+-- before creating a payment row.
+
+drop policy if exists "Conversation members can read payments" on public.payments;
+create policy "Conversation members can read payments"
+  on public.payments for select
+  using (
+    exists (
+      select 1 from public.agency_clients ac
+      where ac.id = payments.agency_client_id
+        and (ac.agency_id = auth.uid() or ac.client_id = auth.uid())
+    )
+  );
+
+drop policy if exists "Agency can create payments" on public.payments;
+create policy "Agency can create payments"
+  on public.payments for insert
+  with check (
+    exists (
+      select 1 from public.agency_clients ac
+      where ac.id = payments.agency_client_id and ac.agency_id = auth.uid()
+    )
+  );
+
+-- Webhook updates use the service-role key (bypasses RLS), so no UPDATE policy needed for end-users.
+-- If you want to allow service-role only updates via RLS: use a permissive policy scoped to service_role.
+drop policy if exists "Service role can update payments" on public.payments;
+create policy "Service role can update payments"
+  on public.payments for update
+  using (true);
+
+
+

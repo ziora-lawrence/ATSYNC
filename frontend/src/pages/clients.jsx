@@ -29,6 +29,9 @@ export const Clients = () => {
   const [dbMessages, setDbMessages] = useState([]);
   const [dbSending, setDbSending] = useState(false);
 
+  // ── Approvals for the active Supabase client (agency view) ──
+  const [agencyApprovals, setAgencyApprovals] = useState([]);
+
   const formatTime = (iso) => {
     const d = new Date(iso);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -52,6 +55,7 @@ export const Clients = () => {
           client_id,
           business_name,
           created_at,
+          intake_submissions ( budget ),
           projects ( id, name, phase, progress, revisions_used, revisions_total, status )
         `)
         .eq('agency_id', agencyId)
@@ -73,7 +77,7 @@ export const Clients = () => {
           type: 'active',
           statusDot: 'green',
           service: project?.name || 'New Project',
-          budget: '—',
+          budget: row.intake_submissions?.budget || '—',
           deadline: '—',
           progress: project?.progress || 0,
           alertBadge: null,
@@ -157,6 +161,33 @@ export const Clients = () => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+  }, [activeClient?.id, activeClient?.source]);
+
+  // ── Fetch pending approvals for active Supabase client (agency side) ──
+  useEffect(() => {
+    if (!activeClient?.id || activeClient?.source !== 'supabase') {
+      setAgencyApprovals([]);
+      return;
+    }
+    const agencyClientId = activeClient.id;
+
+    const fetchApprovals = async () => {
+      const { data, error } = await supabase
+        .from('approvals')
+        .select('*')
+        .eq('agency_client_id', agencyClientId)
+        .eq('status', 'pending')
+        .order('requested_at', { ascending: false });
+      if (!error && data) setAgencyApprovals(data);
+    };
+    fetchApprovals();
+
+    const appChannel = supabase
+      .channel(`agency-approvals:${agencyClientId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'approvals', filter: `agency_client_id=eq.${agencyClientId}` }, fetchApprovals)
+      .subscribe();
+
+    return () => { supabase.removeChannel(appChannel); };
   }, [activeClient?.id, activeClient?.source]);
 
   // Auto-scroll to bottom of chat
@@ -260,20 +291,38 @@ export const Clients = () => {
     setIsApprovalOpen(true);
   };
 
-  const handleSendApproval = (e) => {
+  const handleSendApproval = async (e) => {
     e.preventDefault();
     if (!hasClient) return;
 
-    // Update client status/alerts
-    setClients(prev => prev.map(c => {
-      if (c.id !== activeClient.id) return c;
-      return {
-        ...c,
-        alertBadge: 'ready',
-        alertDesc: approvalRequestText || 'Awaiting client approval request.',
-        priorityAction: 'Awaiting client approval response on portal.'
-      };
-    }));
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from('approvals')
+      .insert({
+        agency_client_id: activeClient.id,
+        project_id: activeClient.project?.id || null,
+        type: 'delivery_approval',
+        title: approvalRequestText || 'Awaiting client approval request.',
+        status: 'pending',
+        requested_by: user?.id || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error inserting approval request:', error);
+      triggerToast('Failed to send approval request.');
+      return;
+    }
+
+    // Insert system notification message in chat
+    await supabase.from('messages').insert({
+      agency_client_id: activeClient.id,
+      sender_id: user?.id || 'agency',
+      sender_role: 'agency',
+      content: `[System Notice] Agency sent approval request: "${approvalRequestText}"`,
+    });
 
     // Trigger toast and notification
     triggerToast(`Approval request sent to ${activeClient.name}!`);
@@ -283,6 +332,39 @@ export const Clients = () => {
     ]);
 
     setIsApprovalOpen(false);
+  };
+
+  const handleAgencyRequestChanges = async () => {
+    if (!hasClient) return;
+    const title = prompt("Enter change request title (e.g. Scope Creep: Custom Animations):");
+    if (!title) return;
+    const description = prompt("Enter details/description for this change request:");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('approvals')
+      .insert({
+        agency_client_id: activeClient.id,
+        project_id: activeClient.project?.id || null,
+        type: 'change_request',
+        title,
+        description,
+        status: 'pending',
+        requested_by: user?.id || null,
+      });
+
+    if (error) {
+      console.error('Error inserting change request:', error);
+      triggerToast('Failed to log change request.');
+    } else {
+      await supabase.from('messages').insert({
+        agency_client_id: activeClient.id,
+        sender_id: user?.id || 'agency',
+        sender_role: 'agency',
+        content: `[Change Request] Agency requested changes: "${title}" (${description || ''})`,
+      });
+      triggerToast(`Change request "${title}" logged!`);
+    }
   };
 
   const handleOpenAddTaskOverlay = (taskName) => {
@@ -415,7 +497,7 @@ export const Clients = () => {
             <>
               <button
                 className="btn-outline danger"
-                onClick={() => triggerToast('Logged change request scope flag.')}
+                onClick={handleAgencyRequestChanges}
               >
                 <i className="ti ti-edit"></i> Request changes
               </button>
@@ -592,6 +674,7 @@ export const Clients = () => {
               onToggleBriefLock={handleToggleBriefLock}
               onAddPhase={handleAddPhase}
               setRightPanelOpen={setRightPanelOpen}
+              approvals={agencyApprovals}
             />
           </div>
         )}
