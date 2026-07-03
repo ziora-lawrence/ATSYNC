@@ -13,11 +13,14 @@ export const RightPanel = ({
   onToggleBriefLock,
   onAddPhase,
   setRightPanelOpen,
+  approvals = [],
+  onSetChangeRequestPrice,
 }) => {
   const hasClient = activeClient && activeClient.id;
 
   const [newPhaseName, setNewPhaseName] = useState('');
   const [newPhaseDate, setNewPhaseDate] = useState('');
+  const [priceDrafts, setPriceDrafts] = useState({});
 
   const getSentimentClass = (sentiment) => {
     if (sentiment < 60) return 'low';
@@ -52,6 +55,22 @@ export const RightPanel = ({
           onClick={() => setRightPanelTab('timeline')}
         >
           Timeline
+        </div>
+        <div
+          className={`ut ${rightPanelTab === 'approvals' ? 'active' : ''}`}
+          onClick={() => setRightPanelTab('approvals')}
+          style={{ position: 'relative' }}
+        >
+          Approvals
+          {approvals.length > 0 && (
+            <span style={{
+              position: 'absolute', top: '4px', right: '-2px',
+              background: '#f59e0b', color: '#000', borderRadius: '50%',
+              width: '14px', height: '14px', fontSize: '9px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: '700'
+            }}>{approvals.length}</span>
+          )}
         </div>
         <div className="ut dim">Bob</div>
         {/* Mobile close button for right panel */}
@@ -176,7 +195,7 @@ export const RightPanel = ({
                           ></div>
                         </div>
                         <div className="task-meta-row">
-                          <span className={`task-date ${task.overdue && !task.completed ? 'ov' : ''}`}>
+                          <span className={`task-due ${task.overdue && !task.completed ? 'ov' : ''}`}>
                             {task.completed ? 'Approved' : task.overdue ? '2 days overdue' : 'Due tomorrow'}
                           </span>
                           <span className="task-vis">Public</span>
@@ -282,6 +301,116 @@ export const RightPanel = ({
                 ))
               ) : (
                 <div style={{ fontSize: '11px', color: 'var(--text-ter)' }}>No scope flags raised.</div>
+              )}
+            </div>
+            {/* APPROVALS PANE */}
+            <div className={`upane ${rightPanelTab === 'approvals' ? 'active' : ''}`}>
+              {approvals.length === 0 ? (
+                <div style={{ fontSize: '12px', color: 'var(--text-sec)', textAlign: 'center', padding: '16px 0' }}>
+                  No pending approvals or change requests.
+                </div>
+              ) : (
+                <>
+                  {approvals.filter(a => a.type === 'delivery_approval').length > 0 && (
+                    <>
+                      <div className="fld-lbl" style={{ marginBottom: '8px' }}>Awaiting client approval</div>
+                      {approvals.filter(a => a.type === 'delivery_approval').map(ap => (
+                        <div key={ap.id} style={{
+                          background: 'rgba(56,189,248,0.06)',
+                          border: '1px solid rgba(56,189,248,0.15)',
+                          borderRadius: '8px',
+                          padding: '10px 12px',
+                          marginBottom: '8px'
+                        }}>
+                          <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>{ap.title}</div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-sec)' }}>
+                            Sent {ap.requested_at ? new Date(ap.requested_at).toLocaleDateString() : '—'} · ₦{Number(ap.amount || 0).toLocaleString()}
+                          </div>
+                          <div style={{
+                            marginTop: '6px',
+                            display: 'inline-block',
+                            fontSize: '10px',
+                            fontWeight: '600',
+                            padding: '2px 8px',
+                            borderRadius: '20px',
+                            background: 'rgba(245,158,11,0.15)',
+                            color: '#f59e0b',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em'
+                          }}>Pending</div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {approvals.filter(a => a.type === 'change_request').length > 0 && (
+                    <>
+                      <div className="fld-lbl" style={{ marginBottom: '8px', marginTop: '12px' }}>Change requests from client</div>
+                      {approvals.filter(a => a.type === 'change_request').map(ap => (
+                        <div key={ap.id} style={{
+                          background: 'rgba(239,68,68,0.06)',
+                          border: '1px solid rgba(239,68,68,0.15)',
+                          borderRadius: '8px',
+                          padding: '10px 12px',
+                          marginBottom: '8px'
+                        }}>
+                          <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>{ap.title}</div>
+                          {ap.description && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-sec)', marginBottom: '4px' }}>{ap.description}</div>
+                          )}
+                          <div style={{ fontSize: '10px', color: 'var(--text-sec)', marginBottom: '8px' }}>
+                            {ap.requested_at ? new Date(ap.requested_at).toLocaleDateString() : '—'}
+                          </div>
+
+                          {ap.amount ? (
+                            <div style={{
+                              fontSize: '11px', fontWeight: '600', color: '#f59e0b',
+                              display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px'
+                            }}>
+                              <i className="ti ti-clock"></i> ₦{Number(ap.amount).toLocaleString()} sent — awaiting client approval
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                              <span style={{ fontSize: '13px', color: '#fff' }}>₦</span>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                placeholder="Price this request"
+                                value={priceDrafts[ap.id] || ''}
+                                onChange={(e) => setPriceDrafts(prev => ({ ...prev, [ap.id]: e.target.value }))}
+                                style={{
+                                  flex: 1, padding: '5px 8px', fontSize: '12px', color: '#fff',
+                                  background: 'var(--bg-sub)', border: '1px solid var(--border)',
+                                  borderRadius: '6px'
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="db p"
+                                style={{ padding: '5px 10px', fontSize: '11px' }}
+                                onClick={() => onSetChangeRequestPrice?.(ap.id, priceDrafts[ap.id])}
+                              >
+                                Send
+                              </button>
+                            </div>
+                          )}
+
+                          <div style={{
+                            display: 'inline-block',
+                            fontSize: '10px',
+                            fontWeight: '600',
+                            padding: '2px 8px',
+                            borderRadius: '20px',
+                            background: 'rgba(239,68,68,0.15)',
+                            color: '#ef4444',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em'
+                          }}>Change request</div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
               )}
             </div>
           </>

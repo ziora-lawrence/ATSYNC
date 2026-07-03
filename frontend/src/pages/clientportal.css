@@ -469,6 +469,10 @@ body { font-family: var(--cp-font); background: var(--cp-bg); color: var(--cp-te
   border-radius: var(--cp-r);
   padding: 10px 12px;
 }
+.cp-approval-row.completed {
+  background: rgba(29, 158, 117, 0.06);
+  border-color: rgba(29, 158, 117, 0.15);
+}
 .cp-approval-title { font-size: 12px; font-weight: 600; }
 .cp-approval-date { font-size: 10px; color: var(--cp-text-sec); margin-top: 2px; }
 .cp-approve-btn {

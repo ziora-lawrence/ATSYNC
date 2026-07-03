@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import './clientportal.css';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://atsync-backend.onrender.com';
+
 // ── Agency Profile Modal ──────────────────────────────────────
 const AgencyModal = ({ agency, onClose }) => (
   <div className="cp-modal-backdrop" onClick={onClose}>
@@ -92,6 +94,12 @@ const formatTime = (iso) => {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+const fmtAmount = (amount) => {
+  const num = Number(amount);
+  if (isNaN(num)) return '—';
+  return `₦${num.toLocaleString()}`;
+};
+
 // ── Main Component ────────────────────────────────────────────
 const ClientPortal = () => {
   const navigate = useNavigate();
@@ -106,6 +114,9 @@ const ClientPortal = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState(!isMobile());
   const [agencyModal, setAgencyModal] = useState(null);
   const [profileModal, setProfileModal] = useState(false);
+  const [changeModalOpen, setChangeModalOpen] = useState(false);
+  const [changeTitle, setChangeTitle] = useState('');
+  const [changeDesc, setChangeDesc] = useState('');
   const [avatarPopup, setAvatarPopup] = useState(false);
   const [loadState, setLoadState] = useState('loading');
 
@@ -128,7 +139,8 @@ const ClientPortal = () => {
           agency_id,
           business_name,
           profiles!agency_clients_agency_id_fkey ( agency_name, tagline, location ),
-          projects ( id, name, phase, progress, revisions_used, revisions_total, status )
+          projects ( id, name, phase, progress, revisions_used, revisions_total, status ),
+          approvals ( id, type, title, description, amount, status, requested_at, payments ( status ) )
         `)
         .eq('client_id', userData.user.id);
 
@@ -138,6 +150,7 @@ const ClientPortal = () => {
       const shaped = data.map((row, idx) => {
         const agencyName = row.profiles?.agency_name || row.business_name || 'Agency';
         const project = Array.isArray(row.projects) ? row.projects[0] : row.projects;
+        const approvalsList = Array.isArray(row.approvals) ? row.approvals : [];
         return {
           id: row.id,
           agency_id: row.agency_id,
@@ -156,7 +169,7 @@ const ClientPortal = () => {
                 revisionsTotal: project.revisions_total,
                 status: project.status,
                 tasks: [],
-                pendingApprovals: [],
+                approvals: approvalsList,
                 invoice: null,
               }
             : {
@@ -168,7 +181,7 @@ const ClientPortal = () => {
                 revisionsTotal: 0,
                 status: 'pending',
                 tasks: [],
-                pendingApprovals: [],
+                approvals: approvalsList,
                 invoice: null,
               },
         };
@@ -182,13 +195,28 @@ const ClientPortal = () => {
     fetchData();
   }, [clientId]);
 
+  // ── Refetch just the approvals for the current conversation (used after approve/pay/webhook) ──
+  const refetchApprovals = async () => {
+    if (!selectedAgencyClientId) return;
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('id, type, title, description, amount, status, requested_at, payments ( status )')
+      .eq('agency_client_id', selectedAgencyClientId);
+
+    if (error) { console.error('Error refetching approvals:', error); return; }
+
+    setAgencies(prev => prev.map(ag => {
+      if (ag.id !== selectedAgencyClientId) return ag;
+      return { ...ag, project: { ...ag.project, approvals: data || [] } };
+    }));
+  };
+
   // ── Fetch messages + subscribe to realtime when conversation changes ──
   useEffect(() => {
     if (!selectedAgencyClientId) return;
 
     setMessages([]);
 
-    // Initial fetch
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('messages')
@@ -201,7 +229,6 @@ const ClientPortal = () => {
 
     fetchMessages();
 
-    // Realtime subscription
     const channel = supabase
       .channel(`messages:${selectedAgencyClientId}`)
       .on(
@@ -214,7 +241,6 @@ const ClientPortal = () => {
         },
         (payload) => {
           setMessages(prev => {
-            // Replace matching optimistic message (same content + role) with real DB row
             const optIdx = prev.findIndex(
               m => String(m.id).startsWith('opt-') &&
                    m.content === payload.new.content &&
@@ -225,7 +251,6 @@ const ClientPortal = () => {
               next[optIdx] = payload.new;
               return next;
             }
-            // Skip true duplicates (shouldn't happen, but guard anyway)
             if (prev.find(m => m.id === payload.new.id)) return prev;
             return [...prev, payload.new];
           });
@@ -233,7 +258,26 @@ const ClientPortal = () => {
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Also listen for approval status changes (approve/paid) so the panel updates live
+    const approvalsChannel = supabase
+      .channel(`approvals:${selectedAgencyClientId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'approvals', filter: `agency_client_id=eq.${selectedAgencyClientId}` },
+        () => refetchApprovals()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payments', filter: `agency_client_id=eq.${selectedAgencyClientId}` },
+        () => refetchApprovals()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(approvalsChannel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgencyClientId]);
 
   // ── Auto-scroll to bottom when messages change ──
@@ -269,11 +313,107 @@ const ClientPortal = () => {
 
     if (error) {
       console.error('Send error:', error);
-      // remove optimistic on failure
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
     }
 
     setSending(false);
+  };
+
+  // ── Approve a pending delivery approval (does NOT charge anything) ──
+  const handleApprove = async (approvalId, title) => {
+    const { error } = await supabase
+      .from('approvals')
+      .update({ status: 'approved', resolved_at: new Date().toISOString() })
+      .eq('id', approvalId);
+
+    if (error) {
+      console.error('Error approving:', error);
+      alert('Could not approve. Try again.');
+      return;
+    }
+
+    await supabase.from('messages').insert({
+      agency_client_id: selectedAgencyClientId,
+      sender_id: client.id,
+      sender_role: 'client',
+      content: `[Approved] Client approved: "${title}"`,
+    });
+
+    refetchApprovals();
+  };
+
+  // ── Initiate a REAL Paystack payment via the backend for an approved delivery ──
+  // Takes the approval's OWN amount, not the project's total budget.
+  const handlePay = async (approvalId, approvalAmount) => {
+    if (!selectedAgencyClientId || !client) return;
+    const amount = Number(approvalAmount);
+    if (!amount || amount <= 0) {
+      alert('This approval has no valid amount set. Contact your agency.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/payments/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agency_client_id: selectedAgencyClientId,
+          approval_id: approvalId,
+          amount,
+          email: client.email,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || 'Payment initiation failed.');
+        return;
+      }
+
+      // Redirect to Paystack's hosted checkout — actual payment happens here,
+      // and the backend webhook flips the payments row to 'paid' once Paystack confirms.
+      window.location.assign(json.authorization_url);
+    } catch (err) {
+      console.error('Error initiating payment:', err);
+      alert('Could not connect to server. Please try again.');
+    }
+  };
+
+  const openChangeModal = () => {
+    setChangeTitle('');
+    setChangeDesc('');
+    setChangeModalOpen(true);
+  };
+
+  const submitChangeRequest = async (e) => {
+    e.preventDefault();
+    if (!selectedAgencyClientId || !client || !changeTitle.trim()) return;
+
+    const { error } = await supabase.from('approvals').insert({
+      agency_client_id: selectedAgencyClientId,
+      type: 'change_request',
+      title: changeTitle.trim(),
+      description: changeDesc.trim() || null,
+      status: 'pending',
+      requested_by: client.id,
+      // No amount — the agency prices this when they review it before it can be paid.
+    });
+
+    if (error) {
+      console.error('Error inserting client change request:', error);
+      alert('Could not send change request. Try again.');
+      return;
+    }
+
+    await supabase.from('messages').insert({
+      agency_client_id: selectedAgencyClientId,
+      sender_id: client.id,
+      sender_role: 'client',
+      content: `[Change Request] Client requested changes: "${changeTitle.trim()}"`,
+    });
+
+    setChangeModalOpen(false);
+    refetchApprovals();
   };
 
   const progressColor =
@@ -285,6 +425,17 @@ const ClientPortal = () => {
   if (loadState === 'error') return <div className="cp-shell"><div className="cp-loading">Couldn't load your portal. Try refreshing, or log in again.</div></div>;
   if (loadState === 'empty') return <div className="cp-shell"><div className="cp-loading">You're not connected to any agencies yet. If you were just approved by an agency, use the invite link they sent you to finish setup.</div></div>;
 
+  const approvalsList = project?.approvals || [];
+const needsApproval = approvalsList.filter(
+  ap => ap.status === 'pending' && ap.amount != null && (ap.type === 'delivery_approval' || ap.type === 'change_request')
+);
+const awaitingPayment = approvalsList.filter(
+  ap => ap.status === 'approved' && ap.type !== 'scope_creep_flag' && !ap.payments?.some(p => p.status === 'paid')
+);
+const completedPayments = approvalsList.filter(
+  ap => ap.status === 'approved' && ap.type !== 'scope_creep_flag' && ap.payments?.some(p => p.status === 'paid')
+);
+const pendingChangeRequests = approvalsList.filter(ap => ap.status === 'pending' && ap.type === 'change_request' && ap.amount == null);
   return (
     <div className="cp-shell">
       {(!leftPanelCollapsed || rightPanelOpen) && (
@@ -430,7 +581,7 @@ const ClientPortal = () => {
             <span className="cp-revision-text">{project.revisionsUsed}/{project.revisionsTotal} used</span>
           </div>
           <div className="cp-action-btns">
-            <button className="cp-action-btn"><i className="ti ti-edit"></i> Request changes</button>
+            <button className="cp-action-btn" onClick={openChangeModal}><i className="ti ti-edit"></i> Request changes</button>
             <button className="cp-action-btn secondary"><i className="ti ti-file-description"></i> Change brief</button>
           </div>
         </div>
@@ -451,16 +602,73 @@ const ClientPortal = () => {
           </div>
         </div>
 
-        {project.pendingApprovals.length > 0 && (
+        {needsApproval.length > 0 && (
           <div className="cp-right-section">
             <div className="cp-right-label">Needs your approval</div>
-            {project.pendingApprovals.map(ap => (
+            {needsApproval.map(ap => (
               <div key={ap.id} className="cp-approval-row">
                 <div className="cp-approval-info">
                   <div className="cp-approval-title">{ap.title}</div>
-                  <div className="cp-approval-date">{ap.date}</div>
+                  <div className="cp-approval-date">
+                    {ap.requested_at ? new Date(ap.requested_at).toLocaleDateString() : ''} · {fmtAmount(ap.amount)}
+                  </div>
                 </div>
-                <button className="cp-approve-btn"><i className="ti ti-check"></i> Approve</button>
+                <button className="cp-approve-btn" onClick={() => handleApprove(ap.id, ap.title)}>
+                  <i className="ti ti-check"></i> Approve
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {awaitingPayment.length > 0 && (
+          <div className="cp-right-section">
+            <div className="cp-right-label">Approved & Awaiting Payment</div>
+            {awaitingPayment.map(ap => (
+              <div key={ap.id} className="cp-approval-row" style={{ background: 'rgba(29,158,117,0.06)', borderColor: 'rgba(29,158,117,0.15)' }}>
+                <div className="cp-approval-info">
+                  <div className="cp-approval-title">{ap.title}</div>
+                  <div className="cp-approval-date" style={{ color: 'var(--cp-green)' }}>
+                    Approved · {fmtAmount(ap.amount)}
+                  </div>
+                </div>
+                <button
+                  className="cp-approve-btn"
+                  style={{ background: 'var(--cp-green)' }}
+                  onClick={() => handlePay(ap.id, ap.amount)}
+                >
+                  <i className="ti ti-credit-card"></i> Pay Now
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {completedPayments.length > 0 && (
+          <div className="cp-right-section">
+            <div className="cp-right-label">Completed Payments</div>
+            {completedPayments.map(ap => (
+              <div key={ap.id} className="cp-approval-row completed">
+                <div className="cp-approval-info">
+                  <div className="cp-approval-title">{ap.title}</div>
+                  <div className="cp-approval-date">
+                    Paid · {fmtAmount(ap.amount)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {pendingChangeRequests.length > 0 && (
+          <div className="cp-right-section">
+            <div className="cp-right-label">Pending change requests</div>
+            {pendingChangeRequests.map(ap => (
+              <div key={ap.id} className="cp-approval-row">
+                <div className="cp-approval-info">
+                  <div className="cp-approval-title">{ap.title}</div>
+                  <div className="cp-approval-date cp-change-badge">Awaiting price from agency</div>
+                </div>
               </div>
             ))}
           </div>
@@ -481,6 +689,45 @@ const ClientPortal = () => {
           )}
         </div>
       </div>
+
+      {changeModalOpen && (
+        <div className="cp-modal-backdrop" onClick={() => setChangeModalOpen(false)}>
+          <div className="cp-modal" onClick={e => e.stopPropagation()}>
+            <button className="cp-modal-close" onClick={() => setChangeModalOpen(false)}>
+              <i className="ti ti-x"></i>
+            </button>
+            <div className="cp-modal-name">Request changes</div>
+            <div className="cp-modal-tag" style={{ marginBottom: '12px' }}>
+              Your agency will review this and reply with a price before any charge is made.
+            </div>
+            <form onSubmit={submitChangeRequest} style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+              <div className="cp-profile-field">
+                <label htmlFor="cp-change-title">What do you need changed?</label>
+                <input
+                  id="cp-change-title"
+                  type="text"
+                  value={changeTitle}
+                  onChange={e => setChangeTitle(e.target.value)}
+                  placeholder="e.g. Add a gallery section to homepage"
+                  required
+                />
+              </div>
+              <div className="cp-profile-field">
+                <label htmlFor="cp-change-desc">Any extra detail? (optional)</label>
+                <textarea
+                  id="cp-change-desc"
+                  rows={3}
+                  value={changeDesc}
+                  onChange={e => setChangeDesc(e.target.value)}
+                  placeholder="Add context to help your agency scope this"
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+              <button type="submit" className="cp-profile-save">Send request</button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {agencyModal && <AgencyModal agency={agencyModal} onClose={() => setAgencyModal(null)} />}
       {profileModal && <ClientProfileModal client={client} onClose={() => setProfileModal(false)} />}

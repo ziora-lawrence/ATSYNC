@@ -29,9 +29,20 @@ export const Clients = () => {
   const [dbMessages, setDbMessages] = useState([]);
   const [dbSending, setDbSending] = useState(false);
 
+  // ── Real approvals/change-requests for the active Supabase client ──
+  const [clientApprovals, setClientApprovals] = useState([]);
+
   const formatTime = (iso) => {
     const d = new Date(iso);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Strip a budget string like "₦150,000" down to a plain numeric string.
+  // Returns '' if there's nothing usable (e.g. placeholder "—").
+  const parseBudgetToNumeric = (val) => {
+    if (!val || typeof val !== 'string') return '';
+    const num = val.replace(/[^0-9.]/g, '');
+    return num || '';
   };
 
   // Fetch real approved clients for this agency
@@ -100,6 +111,7 @@ export const Clients = () => {
   const [rightPanelTab, setRightPanelTab] = useState('intel');
   const [isApprovalOpen, setIsApprovalOpen] = useState(false);
   const [approvalRequestText, setApprovalRequestText] = useState('');
+  const [approvalAmount, setApprovalAmount] = useState('');
 
   // Add Task overlay form state
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
@@ -157,6 +169,26 @@ export const Clients = () => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+  }, [activeClient?.id, activeClient?.source]);
+
+  // ── Fetch approvals/change-requests for the active Supabase client ──
+  const fetchClientApprovals = async (agencyClientId) => {
+    if (!agencyClientId) { setClientApprovals([]); return; }
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('id, type, title, description, amount, status, requested_at')
+      .eq('agency_client_id', agencyClientId)
+      .order('requested_at', { ascending: false });
+    if (error) { console.error('Error fetching approvals:', error); return; }
+    setClientApprovals(data || []);
+  };
+
+  useEffect(() => {
+    if (activeClient?.source === 'supabase' && activeClient?.id) {
+      fetchClientApprovals(activeClient.id);
+    } else {
+      setClientApprovals([]);
+    }
   }, [activeClient?.id, activeClient?.source]);
 
   // Auto-scroll to bottom of chat
@@ -255,16 +287,54 @@ export const Clients = () => {
     }, 1500);
   };
 
-  const _handleOpenApprovalModal = () => {
+  const handleOpenApprovalModal = () => {
     setApprovalRequestText(`Approval request for ${activeClient.service || 'deliverables'}`);
+    setApprovalAmount(parseBudgetToNumeric(activeClient.budget));
     setIsApprovalOpen(true);
   };
 
-  const handleSendApproval = (e) => {
+  const handleSendApproval = async (e) => {
     e.preventDefault();
     if (!hasClient) return;
 
-    // Update client status/alerts
+    const amountNum = Number(approvalAmount);
+    if (!approvalAmount || isNaN(amountNum) || amountNum <= 0) {
+      triggerToast('Enter a valid amount before sending.');
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data: _data, error } = await supabase
+      .from('approvals')
+      .insert({
+        agency_client_id: activeClient.id,
+        project_id: activeClient.project?.id || null,
+        type: 'delivery_approval',
+        title: approvalRequestText || 'Awaiting client approval request.',
+        amount: amountNum,
+        currency: 'NGN',
+        status: 'pending',
+        requested_by: user?.id || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error inserting approval request:', error);
+      triggerToast('Failed to send approval request.');
+      return;
+    }
+
+    // Insert system notification message in chat
+    await supabase.from('messages').insert({
+      agency_client_id: activeClient.id,
+      sender_id: user?.id || 'agency',
+      sender_role: 'agency',
+      content: `[System Notice] Agency sent approval request: "${approvalRequestText}" — ₦${amountNum.toLocaleString()}`,
+    });
+
+    // Reflect the sent request in local UI state (ribbon/badge)
     setClients(prev => prev.map(c => {
       if (c.id !== activeClient.id) return c;
       return {
@@ -275,14 +345,47 @@ export const Clients = () => {
       };
     }));
 
-    // Trigger toast and notification
     triggerToast(`Approval request sent to ${activeClient.name}!`);
     setNotificationsList(prev => [
-      { id: Date.now(), text: `Approval request sent to ${activeClient.name} for: "${approvalRequestText}"`, read: false },
+      { id: Date.now(), text: `Approval request sent to ${activeClient.name} for: "${approvalRequestText}" (₦${amountNum.toLocaleString()})`, read: false },
       ...prev
     ]);
 
+    setApprovalRequestText('');
+    setApprovalAmount('');
     setIsApprovalOpen(false);
+    fetchClientApprovals(activeClient.id);
+  };
+
+  // ── Agency sets a price on a client's change request ──
+  const handleSetChangeRequestPrice = async (approvalId, amount) => {
+    const amountNum = Number(amount);
+    if (!amountNum || amountNum <= 0) {
+      triggerToast('Enter a valid price first.');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('approvals')
+      .update({ amount: amountNum, currency: 'NGN' })
+      .eq('id', approvalId);
+
+    if (error) {
+      console.error('Error pricing change request:', error);
+      triggerToast('Failed to set price.');
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from('messages').insert({
+      agency_client_id: activeClient.id,
+      sender_id: user?.id || 'agency',
+      sender_role: 'agency',
+      content: `[System Notice] Agency priced this change request at ₦${amountNum.toLocaleString()} — awaiting your approval.`,
+    });
+
+    triggerToast('Price sent to client for approval.');
+    fetchClientApprovals(activeClient.id);
   };
 
   const handleOpenAddTaskOverlay = (taskName) => {
@@ -413,6 +516,12 @@ export const Clients = () => {
         <div className="chat-actions">
           {hasClient && (
             <>
+              <button
+                className="btn-outline"
+                onClick={handleOpenApprovalModal}
+              >
+                <i className="ti ti-circle-check"></i> Send for approval
+              </button>
               <button
                 className="btn-outline danger"
                 onClick={() => triggerToast('Logged change request scope flag.')}
@@ -592,6 +701,8 @@ export const Clients = () => {
               onToggleBriefLock={handleToggleBriefLock}
               onAddPhase={handleAddPhase}
               setRightPanelOpen={setRightPanelOpen}
+              approvals={clientApprovals}
+              onSetChangeRequestPrice={handleSetChangeRequestPrice}
             />
           </div>
         )}
@@ -721,7 +832,7 @@ export const Clients = () => {
               <button type="button" className="db-modal-close" onClick={() => setIsApprovalOpen(false)}>✕</button>
             </div>
             <p style={{ fontSize: '12.5px', color: 'var(--text-sec)', lineHeight: 1.5 }}>
-              Client will see a popup asking them to approve or reject. Price is locked once you send — you can't change it after.
+              Client will see a popup asking them to approve or reject. Enter the price for this specific request — it doesn't have to match the total project budget. Price is locked once you send.
             </p>
             <input
               className="form-input"
@@ -730,11 +841,37 @@ export const Clients = () => {
               onChange={(e) => setApprovalRequestText(e.target.value)}
               required
             />
-            <div style={{ background: 'var(--bg-sub)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: '10px', color: 'var(--text-ter)', fontWeight: 'bold' }}>AGREED PRICE</div>
-                <div style={{ fontSize: '15px', color: '#fff', fontWeight: 'bold', marginTop: '2px' }}>{activeClient.budget}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-ter)', marginTop: '2px' }}>Locked at brief. Cannot be changed.</div>
+            <div style={{ background: 'var(--bg-sub)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-ter)', fontWeight: 'bold', marginBottom: '6px' }}>
+                  PRICE FOR THIS REQUEST
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '15px', color: '#fff', fontWeight: 'bold' }}>₦</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    className="form-input"
+                    style={{
+                      padding: '6px 8px',
+                      fontSize: '15px',
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      background: 'transparent',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      width: '140px'
+                    }}
+                    placeholder="0"
+                    value={approvalAmount}
+                    onChange={(e) => setApprovalAmount(e.target.value)}
+                    min="1"
+                    required
+                  />
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--text-ter)', marginTop: '6px' }}>
+                  Locked once sent. Cannot be changed after.
+                </div>
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-ter)', textAlign: 'right', lineHeight: 1.4 }}>
                 1% platform fee
