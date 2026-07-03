@@ -63,6 +63,7 @@ export const Clients = () => {
           client_id,
           business_name,
           created_at,
+          intake_submissions ( budget ),
           projects ( id, name, phase, progress, revisions_used, revisions_total, status )
         `)
         .eq('agency_id', agencyId)
@@ -84,7 +85,7 @@ export const Clients = () => {
           type: 'active',
           statusDot: 'green',
           service: project?.name || 'New Project',
-          budget: '—',
+          budget: row.intake_submissions?.budget || '—',
           deadline: '—',
           progress: project?.progress || 0,
           alertBadge: null,
@@ -388,6 +389,39 @@ export const Clients = () => {
     fetchClientApprovals(activeClient.id);
   };
 
+  const handleAgencyRequestChanges = async () => {
+    if (!hasClient) return;
+    const title = prompt("Enter change request title (e.g. Scope Creep: Custom Animations):");
+    if (!title) return;
+    const description = prompt("Enter details/description for this change request:");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('approvals')
+      .insert({
+        agency_client_id: activeClient.id,
+        project_id: activeClient.project?.id || null,
+        type: 'change_request',
+        title,
+        description,
+        status: 'pending',
+        requested_by: user?.id || null,
+      });
+
+    if (error) {
+      console.error('Error inserting change request:', error);
+      triggerToast('Failed to log change request.');
+    } else {
+      await supabase.from('messages').insert({
+        agency_client_id: activeClient.id,
+        sender_id: user?.id || 'agency',
+        sender_role: 'agency',
+        content: `[Change Request] Agency requested changes: "${title}" (${description || ''})`,
+      });
+      triggerToast(`Change request "${title}" logged!`);
+    }
+  };
+
   const handleOpenAddTaskOverlay = (taskName) => {
     setTaskNameInput(taskName || '');
     const today = new Date().toISOString().split('T')[0];
@@ -524,7 +558,7 @@ export const Clients = () => {
               </button>
               <button
                 className="btn-outline danger"
-                onClick={() => triggerToast('Logged change request scope flag.')}
+                onClick={handleAgencyRequestChanges}
               >
                 <i className="ti ti-edit"></i> Request changes
               </button>

@@ -100,16 +100,20 @@ export const IntakeLinks = () => {
         prev.map(c => (c.id === client.id ? { ...c, status: 'approved', type: 'active' } : c))
       );
 
-      // Send invite via Supabase Edge Function (no Render/Resend needed)
+      // Send invite via Express Backend using Resend
       try {
-        const { error: fnError } = await supabase.functions.invoke('send-invite', {
-          body: { intakeId: client.id, agencyId },
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://atsync-backend-vdko.onrender.com';
+        const res = await fetch(`${backendUrl}/api/auth/send-invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intakeId: client.id, agencyId }),
         });
-        if (fnError) {
-          console.error('Invite error:', fnError);
-          triggerToast(`${client.name} approved! Email failed — use Copy Invite Link instead.`);
-        } else {
+        const data = await res.json();
+        if (res.ok) {
           triggerToast(`${client.name} approved! Invite email sent to ${client.email}.`);
+        } else {
+          console.error('Invite error:', data.message);
+          triggerToast(`${client.name} approved! Email failed: ${data.message || 'Unknown error'} — use Copy Invite Link instead.`);
         }
       } catch (err) {
         console.error('Invite email error:', err);

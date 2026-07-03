@@ -493,6 +493,19 @@ body { font-family: var(--cp-font); background: var(--cp-bg); color: var(--cp-te
   transition: opacity 0.15s;
 }
 .cp-approve-btn:hover { opacity: 0.85; }
+.cp-change-badge {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(245,158,11,0.15);
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 
 /* Invoice */
 .cp-invoice-row {
