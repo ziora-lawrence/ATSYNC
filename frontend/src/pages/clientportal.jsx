@@ -3,6 +3,26 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import './clientportal.css';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://atsync-backend.onrender.com';
+
+const fmtAmount = (val) => {
+  const clean = String(val).replace(/[^0-9.]/g, '');
+  const num = parseFloat(clean) || 0;
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 0
+  }).format(num);
+};
+
+const parseBudgetToNumeric = (val) => {
+  if (!val) return 120000;
+  const clean = String(val).replace(/[^0-9.]/g, '');
+  const parsed = parseFloat(clean);
+  return isNaN(parsed) || parsed <= 0 ? 120000 : parsed;
+};
+
+
 // ── Agency Profile Modal ──────────────────────────────────────
 const AgencyModal = ({ agency, onClose }) => (
   <div className="cp-modal-backdrop" onClick={onClose}>
@@ -114,6 +134,9 @@ const ClientPortal = () => {
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef(null);
 
+  // ── Approvals state ──
+  const [pendingApprovals, setPendingApprovals] = useState([]);
+
   // ── Fetch user + agencies ──
   useEffect(() => {
     const fetchData = async () => {
@@ -128,6 +151,7 @@ const ClientPortal = () => {
           agency_id,
           business_name,
           profiles!agency_clients_agency_id_fkey ( agency_name, tagline, location ),
+          intake_submissions ( budget ),
           projects ( id, name, phase, progress, revisions_used, revisions_total, status )
         `)
         .eq('client_id', userData.user.id);
@@ -158,6 +182,7 @@ const ClientPortal = () => {
                 tasks: [],
                 pendingApprovals: [],
                 invoice: null,
+                budget: row.intake_submissions?.budget || '—',
               }
             : {
                 id: null,
@@ -170,6 +195,7 @@ const ClientPortal = () => {
                 tasks: [],
                 pendingApprovals: [],
                 invoice: null,
+                budget: '—',
               },
         };
       });
@@ -235,6 +261,118 @@ const ClientPortal = () => {
 
     return () => { supabase.removeChannel(channel); };
   }, [selectedAgencyClientId]);
+
+  // ── Fetch approvals when conversation changes ──
+  useEffect(() => {
+    if (!selectedAgencyClientId) { setPendingApprovals([]); return; }
+
+    const fetchApprovals = async () => {
+      const { data, error } = await supabase
+        .from('approvals')
+        .select('*, payments(*)')
+        .eq('agency_client_id', selectedAgencyClientId)
+        .order('requested_at', { ascending: false });
+      if (!error && data) setPendingApprovals(data);
+    };
+
+    fetchApprovals();
+
+    // Realtime: refresh approvals/payments on changes
+    const approvalsChannel = supabase
+      .channel(`approvals:${selectedAgencyClientId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'approvals', filter: `agency_client_id=eq.${selectedAgencyClientId}` },
+        () => fetchApprovals()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payments', filter: `agency_client_id=eq.${selectedAgencyClientId}` },
+        () => fetchApprovals()
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(approvalsChannel); };
+  }, [selectedAgencyClientId]);
+
+  // ── Approve a pending approval ──
+  const handleApprove = async (approvalId, title) => {
+    const { error } = await supabase
+      .from('approvals')
+      .update({ status: 'approved', resolved_at: new Date().toISOString() })
+      .eq('id', approvalId);
+
+    if (error) {
+      console.error('Error approving:', error);
+      return;
+    }
+
+    // Post a system message in chat
+    await supabase.from('messages').insert({
+      agency_client_id: selectedAgencyClientId,
+      sender_id: client.id,
+      sender_role: 'client',
+      content: `[Approved] Client approved: "${title}"`,
+    });
+  };
+
+  // ── Initiate Paystack payment for an approved delivery ──
+  const handlePay = async (approvalId, budgetStr) => {
+    if (!selectedAgencyClientId || !client) return;
+    const amount = parseBudgetToNumeric(budgetStr);
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/payments/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agency_client_id: selectedAgencyClientId,
+          approval_id: approvalId,
+          amount,
+          email: client.email,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || 'Payment initiation failed.');
+        return;
+      }
+
+      // Redirect to Paystack authorization checkout URL
+      window.location.href = json.authorization_url;
+    } catch (err) {
+      console.error('Error initiating payment:', err);
+      alert('Could not connect to server. Please try again.');
+    }
+  };
+
+  // ── Client requests changes (change_request) ──
+  const handleClientRequestChanges = async () => {
+    if (!selectedAgencyClientId || !client) return;
+    const title = prompt('Describe the changes you need:');
+    if (!title) return;
+
+    const { error } = await supabase.from('approvals').insert({
+      agency_client_id: selectedAgencyClientId,
+      type: 'change_request',
+      title,
+      status: 'pending',
+      requested_by: client.id,
+    });
+
+    if (error) {
+      console.error('Error inserting client change request:', error);
+      return;
+    }
+
+    await supabase.from('messages').insert({
+      agency_client_id: selectedAgencyClientId,
+      sender_id: client.id,
+      sender_role: 'client',
+      content: `[Change Request] Client requested changes: "${title}"`,
+    });
+  };
 
   // ── Auto-scroll to bottom when messages change ──
   useEffect(() => {
@@ -430,7 +568,7 @@ const ClientPortal = () => {
             <span className="cp-revision-text">{project.revisionsUsed}/{project.revisionsTotal} used</span>
           </div>
           <div className="cp-action-btns">
-            <button className="cp-action-btn"><i className="ti ti-edit"></i> Request changes</button>
+            <button className="cp-action-btn" onClick={handleClientRequestChanges}><i className="ti ti-edit"></i> Request changes</button>
             <button className="cp-action-btn secondary"><i className="ti ti-file-description"></i> Change brief</button>
           </div>
         </div>
@@ -451,34 +589,93 @@ const ClientPortal = () => {
           </div>
         </div>
 
-        {project.pendingApprovals.length > 0 && (
+        {pendingApprovals.filter(a => a.status === 'pending' && a.type === 'delivery_approval').length > 0 && (
           <div className="cp-right-section">
             <div className="cp-right-label">Needs your approval</div>
-            {project.pendingApprovals.map(ap => (
+            {pendingApprovals.filter(a => a.status === 'pending' && a.type === 'delivery_approval').map(ap => (
               <div key={ap.id} className="cp-approval-row">
                 <div className="cp-approval-info">
                   <div className="cp-approval-title">{ap.title}</div>
-                  <div className="cp-approval-date">{ap.date}</div>
+                  <div className="cp-approval-date">
+                    {ap.requested_at ? new Date(ap.requested_at).toLocaleDateString() : ''}
+                  </div>
                 </div>
-                <button className="cp-approve-btn"><i className="ti ti-check"></i> Approve</button>
+                <button
+                  className="cp-approve-btn"
+                  onClick={() => handleApprove(ap.id, ap.title)}
+                >
+                  <i className="ti ti-check"></i> Approve
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {pendingApprovals.filter(a => a.status === 'approved' && a.type === 'delivery_approval' && !a.payments?.some(p => p.status === 'paid')).length > 0 && (
+          <div className="cp-right-section">
+            <div className="cp-right-label">Approved & Awaiting Payment</div>
+            {pendingApprovals.filter(a => a.status === 'approved' && a.type === 'delivery_approval' && !a.payments?.some(p => p.status === 'paid')).map(ap => (
+              <div key={ap.id} className="cp-approval-row" style={{ background: 'rgba(29,158,117,0.06)', borderColor: 'rgba(29,158,117,0.15)' }}>
+                <div className="cp-approval-info">
+                  <div className="cp-approval-title">{ap.title}</div>
+                  <div className="cp-approval-date" style={{ color: 'var(--cp-green)', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <span>Approved</span>
+                    <span>·</span>
+                    <span>{fmtAmount(project.budget)}</span>
+                  </div>
+                </div>
+                <button
+                  className="cp-approve-btn"
+                  style={{ background: 'var(--cp-green)' }}
+                  onClick={() => handlePay(ap.id, project.budget)}
+                >
+                  <i className="ti ti-credit-card"></i> Pay Now
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {pendingApprovals.filter(a => a.status === 'approved' && a.type === 'delivery_approval' && a.payments?.some(p => p.status === 'paid')).length > 0 && (
+          <div className="cp-right-section">
+            <div className="cp-right-label">Completed Payments</div>
+            {pendingApprovals.filter(a => a.status === 'approved' && a.type === 'delivery_approval' && a.payments?.some(p => p.status === 'paid')).map(ap => (
+              <div key={ap.id} className="cp-approval-row" style={{ opacity: 0.7, background: 'var(--cp-card)' }}>
+                <div className="cp-approval-info">
+                  <div className="cp-approval-title">{ap.title}</div>
+                  <div className="cp-approval-date" style={{ color: 'var(--cp-text-sec)' }}>
+                    Paid · {fmtAmount(project.budget)}
+                  </div>
+                </div>
+                <span className="cp-change-badge" style={{ background: 'rgba(29,158,117,0.15)', color: 'var(--cp-green)', marginLeft: 'auto' }}>Paid</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {pendingApprovals.filter(a => a.status === 'pending' && a.type === 'change_request').length > 0 && (
+          <div className="cp-right-section">
+            <div className="cp-right-label">Pending change requests</div>
+            {pendingApprovals.filter(a => a.status === 'pending' && a.type === 'change_request').map(ap => (
+              <div key={ap.id} className="cp-approval-row">
+                <div className="cp-approval-info">
+                  <div className="cp-approval-title">{ap.title}</div>
+                  <div className="cp-approval-date cp-change-badge">Change request</div>
+                </div>
               </div>
             ))}
           </div>
         )}
 
         <div className="cp-right-section">
-          <div className="cp-right-label">Invoice</div>
-          {project.invoice ? (
-            <div className="cp-invoice-row">
-              <div>
-                <div className="cp-invoice-amount">{project.invoice.amount}</div>
-                <div className="cp-invoice-due">Due {project.invoice.due}</div>
-              </div>
-              <span className={`cp-invoice-badge ${project.invoice.status.toLowerCase()}`}>{project.invoice.status}</span>
+          <div className="cp-right-label">Project Budget</div>
+          <div className="cp-invoice-row">
+            <div>
+              <div className="cp-invoice-amount">{fmtAmount(project.budget)}</div>
+              <div className="cp-invoice-due">Total project value</div>
             </div>
-          ) : (
-            <div className="cp-empty-note">No invoice yet</div>
-          )}
+            <span className="cp-invoice-badge paid" style={{ background: 'rgba(108,71,255,0.15)', color: 'var(--cp-ac)' }}>Locked</span>
+          </div>
         </div>
       </div>
 

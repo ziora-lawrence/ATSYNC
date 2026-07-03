@@ -25,6 +25,25 @@ export default function ClientSignup() {
     }
 
     const fetchIntake = async () => {
+      // 1. Try to set session from hash fragment if present (e.g. from invite link redirection)
+      const hash = window.location.hash;
+      if (hash) {
+        const rawHash = hash.startsWith("#") ? hash.substring(1) : hash;
+        const params = new URLSearchParams(rawHash);
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+        if (accessToken && refreshToken) {
+          try {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+          } catch (err) {
+            console.error("Error setting session from hash in signup:", err);
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from('intake_submissions')
         .select('*')
@@ -74,28 +93,45 @@ export default function ClientSignup() {
     setSubmitState('submitting');
     setErrorMsg('');
 
-    // 1. Create the auth account
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    let newUserId;
 
-    if (signUpError) {
-      console.error('Signup error:', signUpError);
-      setErrorMsg(signUpError.message || 'Could not create account.');
-      setSubmitState('error');
-      return;
-    }
+    // Check if we are already logged in (e.g. from invite link)
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session && session.user) {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password.trim()
+      });
+      if (updateError) {
+        console.error('Update password error:', updateError);
+        setErrorMsg(updateError.message || 'Could not set password.');
+        setSubmitState('error');
+        return;
+      }
+      newUserId = session.user.id;
+    } else {
+      // Create the auth account
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    const newUserId = signUpData?.user?.id;
+      if (signUpError) {
+        console.error('Signup error:', signUpError);
+        setErrorMsg(signUpError.message || 'Could not create account.');
+        setSubmitState('error');
+        return;
+      }
 
-    if (!newUserId) {
-      // Email confirmation required before session exists
-      setErrorMsg(
-        'Account created — check your email to confirm, then come back to this link to finish setup.'
-      );
-      setSubmitState('error');
-      return;
+      newUserId = signUpData?.user?.id;
+
+      if (!newUserId) {
+        // Email confirmation required before session exists
+        setErrorMsg(
+          'Account created — check your email to confirm, then come back to this link to finish setup.'
+        );
+        setSubmitState('error');
+        return;
+      }
     }
 
     // 2. Link client to agency via agency_clients
