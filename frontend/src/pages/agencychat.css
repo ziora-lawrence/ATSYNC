@@ -1,0 +1,308 @@
+/* ── AGENCY CHAT CSS ── */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --ac-bg: #09090f;
+  --ac-surface: #0f0f17;
+  --ac-card: #141420;
+  --ac-hover: #1a1a28;
+  --ac-border: rgba(255,255,255,0.06);
+  --ac-border-mid: rgba(255,255,255,0.11);
+  --ac-blue: #38bdf8;
+  --ac-indigo: #6C47FF;
+  --ac-text: #eeeef5;
+  --ac-text-sec: #6b6b80;
+  --ac-text-ter: #3f3f55;
+  --ac-font: 'Outfit', -apple-system, sans-serif;
+  --ac-r: 10px;
+}
+
+/* ── SHELL ── */
+.ac-shell {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ac-bg);
+  font-family: var(--ac-font);
+  color: var(--ac-text);
+}
+
+.ac-empty-state {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ac-text-sec);
+  font-size: 14px;
+  padding: 40px;
+  text-align: center;
+}
+
+/* ── LEFT PANEL ── */
+.ac-left {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--ac-surface);
+  border-right: 1px solid var(--ac-border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.ac-left-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-left-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ac-text);
+  letter-spacing: 0.02em;
+}
+
+.ac-left-count {
+  font-size: 11px;
+  background: rgba(108,71,255,0.15);
+  color: var(--ac-indigo);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-weight: 600;
+}
+
+.ac-client-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.ac-client-list::-webkit-scrollbar { width: 3px; }
+.ac-client-list::-webkit-scrollbar-track { background: transparent; }
+.ac-client-list::-webkit-scrollbar-thumb { background: var(--ac-border-mid); border-radius: 99px; }
+
+.ac-client-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 0;
+  position: relative;
+}
+
+.ac-client-item:hover { background: var(--ac-hover); }
+.ac-client-item.active { background: rgba(108,71,255,0.1); }
+.ac-client-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--ac-indigo);
+  border-radius: 0 3px 3px 0;
+}
+
+.ac-client-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ac-client-info { flex: 1; min-width: 0; }
+
+.ac-client-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ac-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ac-client-project {
+  font-size: 11px;
+  color: var(--ac-text-sec);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.ac-unread-badge {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 99px;
+  background: var(--ac-indigo);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  flex-shrink: 0;
+}
+
+/* ── RIGHT: CHAT ── */
+.ac-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ac-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--ac-border);
+  background: var(--ac-surface);
+  flex-shrink: 0;
+}
+
+.ac-chat-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ac-chat-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ac-text);
+}
+
+.ac-chat-project {
+  font-size: 11px;
+  color: var(--ac-text-sec);
+  margin-top: 1px;
+}
+
+.ac-chat-feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ac-chat-feed::-webkit-scrollbar { width: 3px; }
+.ac-chat-feed::-webkit-scrollbar-track { background: transparent; }
+.ac-chat-feed::-webkit-scrollbar-thumb { background: var(--ac-border-mid); border-radius: 99px; }
+
+.ac-chat-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ac-text-sec);
+  font-size: 13px;
+  text-align: center;
+  padding: 40px;
+}
+
+.ac-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 68%;
+}
+
+.ac-msg.mine { align-self: flex-end; align-items: flex-end; }
+.ac-msg.theirs { align-self: flex-start; align-items: flex-start; }
+
+.ac-msg-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.ac-msg.mine .ac-msg-bubble {
+  background: var(--ac-indigo);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.ac-msg.theirs .ac-msg-bubble {
+  background: var(--ac-card);
+  color: var(--ac-text);
+  border: 1px solid var(--ac-border);
+  border-bottom-left-radius: 4px;
+}
+
+.ac-msg-time {
+  font-size: 10px;
+  color: var(--ac-text-ter);
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+/* ── INPUT ROW ── */
+.ac-chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--ac-border);
+  background: var(--ac-surface);
+  flex-shrink: 0;
+}
+
+.ac-chat-input {
+  flex: 1;
+  background: var(--ac-card);
+  border: 1px solid var(--ac-border-mid);
+  border-radius: var(--ac-r);
+  padding: 10px 14px;
+  color: var(--ac-text);
+  font-family: var(--ac-font);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.ac-chat-input:focus { border-color: var(--ac-indigo); }
+.ac-chat-input::placeholder { color: var(--ac-text-ter); }
+
+.ac-send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--ac-indigo);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.ac-send-btn:hover:not(:disabled) { opacity: 0.85; transform: scale(1.05); }
+.ac-send-btn:disabled { opacity: 0.35; cursor: not-allowed; }

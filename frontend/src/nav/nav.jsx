@@ -48,6 +48,14 @@ const Nav = ({ setShowLogin, setShowWaitlist }) => {
               Login
             </button>
           </li>
+          <li className="nav-menu-cta-mobile">
+            <button
+              className="nav-login-btn nav-waitlist-mobile"
+              onClick={() => { setShowWaitlist(true); closeMenu(); }}
+            >
+              Join Waitlist
+            </button>
+          </li>
         </ul>
 
         {/* Right side */}

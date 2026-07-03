@@ -200,8 +200,9 @@
 /* ── Mobile Menu ── */
 @media (max-width: 820px) {
   .nav-container {
-    padding: 0 20px;
+    padding: 0 16px;
     height: 64px;
+    gap: 12px;
   }
 
   .hamburger {
@@ -253,8 +254,7 @@
   }
 
   .nav-cta {
-    padding: 10px 18px;
-    font-size: 13px;
+    display: none;
   }
 
   .nav-logo-text {
@@ -274,5 +274,16 @@
 @media (max-width: 820px) {
   .mobile-overlay {
     display: block;
+  }
+}
+/* Join Waitlist in mobile menu — only show inside the dropdown */
+.nav-menu-cta-mobile { display: none; }
+
+@media (max-width: 820px) {
+  .nav-menu-cta-mobile { display: block; }
+
+  .nav-waitlist-mobile {
+    color: #00e5ff !important;
+    font-weight: 700 !important;
   }
 }

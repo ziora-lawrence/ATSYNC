@@ -1,0 +1,13 @@
+{
+  "name": "atsync-root",
+  "version": "1.0.0",
+  "description": "Root workspace forwarder for ATSYNC",
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "preview": "npm run preview --prefix frontend"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

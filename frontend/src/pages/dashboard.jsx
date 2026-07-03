@@ -1,158 +1,172 @@
-import React, { useEffect, useState } from 'react';
-import './dashboard.css';
-import Nav from '../nav/nav';
-import { supabase } from '../lib/supabase';
+import React, { useState } from 'react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 
-const Dashboard = () => {
-  const [stats, setStats] = useState({ waitlist: 0, profiles: 0, speed: 3, chaos: 100 });
-  const [chartData, setChartData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+export const Dashboard = () => {
+  const navigate = useNavigate();
+  const {
+    clients = [],
+    setActiveClientId,
+    loading,
+    activeClientsCount,
+    openApprovalsCount,
+  } = useOutletContext();
 
-  // Animated counter helper
-  const animateValue = (start, end, duration, callback) => {
-    const startTime = Date.now();
-    const step = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      callback(Math.floor(start + progress * (end - start)));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
+  const [expandedClientId, setExpandedClientId] = useState('madestone-fa'); // Default expand Madestone FA
+  const [sortKey, setSortKey] = useState('urgency');
+
+  const activeClients = clients.filter(c => c.type === 'active');
+
+  const getDotClass = (dot) => {
+    if (dot === 'orange') return 'amber';
+    return dot || 'gray';
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Get current user
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        setUser(currentUser);
+  const getSentBadgeClass = (sentiment) => {
+    if (sentiment < 60) return 'sent-low';
+    if (sentiment < 80) return 'sent-ok';
+    return 'sent-good';
+  };
 
-        // 1. Waitlist count
-        const { count: waitlistCount } = await supabase
-          .from('waitlist')
-          .select('*', { count: 'exact', head: true });
+  const getTaskMiniDot = (task) => {
+    if (task.completed) return 'dot-green';
+    if (task.overdue) return 'dot-red';
+    return 'dot-amber';
+  };
 
-        // 2. Agent profiles count
-        const { count: profilesCount } = await supabase
-          .from('agent_profiles')
-          .select('*', { count: 'exact', head: true });
-
-        // 3. Monthly waitlist signups for chart (last 6 months)
-        const months = [];
-        for (let i = 5; i >= 0; i--) {
-          const d = new Date();
-          d.setMonth(d.getMonth() - i);
-          months.push({
-            label: d.toLocaleString('default', { month: 'short' }),
-            year: d.getFullYear(),
-            month: d.getMonth() + 1,
-          });
-        }
-
-        const chartResults = await Promise.all(
-          months.map(async ({ label, year, month }) => {
-            const from = `${year}-${String(month).padStart(2, '0')}-01`;
-            const toDate = new Date(year, month, 1);
-            const to = `${toDate.getFullYear()}-${String(toDate.getMonth() + 1).padStart(2, '0')}-01`;
-
-            const { count } = await supabase
-              .from('waitlist')
-              .select('*', { count: 'exact', head: true })
-              .gte('created_at', from)
-              .lt('created_at', to);
-
-            return { label, value: count || 0 };
-          })
-        );
-
-        setChartData(chartResults);
-
-        // Animate stats
-        const wl = waitlistCount || 0;
-        const pr = profilesCount || 0;
-        animateValue(0, wl, 1500, (v) => setStats(s => ({ ...s, waitlist: v })));
-        animateValue(0, pr, 1500, (v) => setStats(s => ({ ...s, profiles: v })));
-        animateValue(0, 3, 1500, (v) => setStats(s => ({ ...s, speed: v })));
-        animateValue(0, 100, 1500, (v) => setStats(s => ({ ...s, chaos: v })));
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const agencyName = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('atsync_user'))?.agencyName || 'your agency';
-    } catch {
-      return 'your agency';
+  const handleCardClick = (clientId, e) => {
+    // If clicking inside the task drawer or another interactive element, don't collapse
+    if (e.target.closest('.task-drawer')) return;
+    
+    if (expandedClientId === clientId) {
+      setExpandedClientId(null);
+    } else {
+      setExpandedClientId(clientId);
     }
-  })();
+  };
 
-  const maxChartValue = Math.max(...chartData.map(d => d.value), 1);
+  const handleOpenClient = (clientId) => {
+    setActiveClientId(clientId);
+    navigate('/dashboard/clients');
+  };
+
+  // Sorting
+  const sortedClients = [...activeClients].sort((a, b) => {
+    if (sortKey === 'name') {
+      return a.name.localeCompare(b.name);
+    }
+    if (sortKey === 'progress') {
+      return b.progress - a.progress;
+    }
+    // Default: Urgency based on sentiment score (lower is more urgent)
+    const sentA = typeof a.sentiment === 'number' ? a.sentiment : 100;
+    const sentB = typeof b.sentiment === 'number' ? b.sentiment : 100;
+    return sentA - sentB;
+  });
+
+  // Calculate total tasks due this week
+  const totalTasksCount = activeClients.reduce((acc, c) => acc + (c.tasks?.filter(t => !t.completed).length || 0), 0);
+  const overdueTasksCount = activeClients.reduce((acc, c) => acc + (c.tasks?.filter(t => !t.completed && t.overdue).length || 0), 0);
 
   return (
-    <div className="dashboard-page">
-      <Nav />
+    <div className="view" id="view-dashboard">
+      {/* Metrics Grid */}
+      <div className="metrics-grid">
+        <div className="mc accent">
+          <div className="mc-label">Active clients</div>
+          <div className="mc-val">{activeClientsCount}</div>
+          <div className="mc-sub">2 need attention</div>
+        </div>
+        <div className="mc">
+          <div className="mc-label">Tasks due this week</div>
+          <div className="mc-val">{totalTasksCount}</div>
+          <div className="mc-sub alert">{overdueTasksCount} overdue</div>
+        </div>
+        <div className="mc">
+          <div className="mc-label">Pending approvals</div>
+          <div className="mc-val">{openApprovalsCount}</div>
+          <div className="mc-sub warn">₦180,000 gated</div>
+        </div>
+      </div>
 
-      <section className="dashboard-header">
-        <h1>
-          {loading ? 'Loading…' : `Welcome back${agencyName !== 'your agency' ? `, ${agencyName}` : ''}! 👋`}
-        </h1>
-        <p>Real‑time overview of your ATSYNC ecosystem.</p>
-      </section>
+      {/* Roster Section Header */}
+      <div className="sec-header">
+        <div className="sec-title">Clients</div>
+        <select 
+          className="sort-sel" 
+          value={sortKey} 
+          onChange={(e) => setSortKey(e.target.value)}
+        >
+          <option value="urgency">Sort by urgency</option>
+          <option value="name">Sort by name</option>
+          <option value="progress">Sort by progress</option>
+        </select>
+      </div>
 
-      <section className="stats-grid">
-        <div className="stat-card glassmorphism">
-          <h3>
-            {stats.waitlist}+
-            <span className="stat-label">On the Waitlist</span>
-          </h3>
-        </div>
-        <div className="stat-card glassmorphism">
-          <h3>
-            {stats.profiles}
-            <span className="stat-label">Agencies Onboarded</span>
-          </h3>
-        </div>
-        <div className="stat-card glassmorphism">
-          <h3>
-            {stats.speed}x
-            <span className="stat-label">Faster Onboarding</span>
-          </h3>
-        </div>
-        <div className="stat-card glassmorphism">
-          <h3>
-            {stats.chaos}%
-            <span className="stat-label">WhatsApp Chaos Eliminated</span>
-          </h3>
-        </div>
-      </section>
-
-      <section className="chart-section glassmorphism">
-        <h2>Monthly Waitlist Sign‑ups</h2>
+      {/* Active Clients Cards */}
+      <div>
         {loading ? (
-          <p style={{ color: '#aaa', textAlign: 'center', padding: '40px 0' }}>Fetching data…</p>
+          <div style={{ color: 'var(--text-sec)', fontSize: '13px' }}>Loading client cards...</div>
+        ) : sortedClients.length === 0 ? (
+          <div style={{ color: 'var(--text-sec)', fontSize: '13px' }}>No active roster clients found</div>
         ) : (
-          <div className="bar-chart">
-            {chartData.map((item, idx) => (
-              <div
-                className="bar"
-                key={idx}
-                style={{ '--value': Math.round((item.value / maxChartValue) * 100) }}
+          sortedClients.map((c) => {
+            const isExpanded = expandedClientId === c.id;
+            return (
+              <div 
+                key={c.id} 
+                className={`ccard ${isExpanded ? 'expanded' : ''} ${c.statusDot === 'red' ? 'urgent' : ''}`}
+                onClick={(e) => handleCardClick(c.id, e)}
               >
-                <span className="bar-label">{item.label}</span>
-                <span className="bar-value">{item.value}</span>
+                <div className="ccard-top">
+                  <span className={`dot dot-${getDotClass(c.statusDot)}`}></span>
+                  <div className="ccard-title">{c.name}</div>
+                  <span className={`sent-badge ${getSentBadgeClass(c.sentiment)}`}>
+                    {c.sentiment}
+                  </span>
+                  <i className="ti ti-chevron-down exp-icon"></i>
+                </div>
+                
+                <div className="ccard-meta">
+                  <div>Service: <span>{c.service}</span></div>
+                  <div>Phase: <span>{c.timeline?.find(t => t.active)?.title || 'Onboarding'}</span></div>
+                </div>
+
+                <div className="prog-row">
+                  <div className="prog-track">
+                    <div 
+                      className={`prog-fill ${c.sentiment < 60 ? 'red' : c.sentiment < 80 ? 'amb' : ''}`} 
+                      style={{ width: `${c.progress}%` }}
+                    ></div>
+                  </div>
+                  <div className="prog-label">
+                    {c.tasks?.filter(t => t.completed).length || 0}/{c.tasks?.length || 0} tasks
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="task-drawer">
+                    {(c.tasks || []).map((t) => (
+                      <div key={t.id} className={`task-mini ${t.overdue && !t.completed ? 'ov' : ''}`}>
+                        <span className={`dot ${getTaskMiniDot(t)}`}></span>
+                        {t.text}
+                      </div>
+                    ))}
+                    <div style={{ marginTop: '10px', textAlign: 'right' }}>
+                      <button 
+                        className="btn-outline" 
+                        onClick={() => handleOpenClient(c.id)}
+                        type="button"
+                      >
+                        <i className="ti ti-brand-whatsapp"></i> Open Communication
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })
         )}
-      </section>
+      </div>
     </div>
   );
 };

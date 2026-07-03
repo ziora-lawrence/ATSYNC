@@ -3,6 +3,8 @@
    Design System: 8px grid · Colors preserved · No horizontal scroll
    ═══════════════════════════════════════════════════════ */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+
 /* ─── Reset & Base ─── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -659,11 +661,23 @@ body {
 }
 
 .faq-answer {
-  padding-top: 14px;
+  max-height: 0;
+  overflow: hidden;
+  padding-top: 0;
   font-size: 15px;
   color: var(--text-s);
   line-height: 1.72;
-  animation: faqReveal 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    padding-top 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease;
+  opacity: 0;
+}
+
+.faq-item.open .faq-answer {
+  max-height: 300px;
+  padding-top: 14px;
+  opacity: 1;
 }
 
 @keyframes faqReveal {
@@ -1058,6 +1072,39 @@ body {
   animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ── Glass variant for the login modal ── */
+.modal-glass {
+  background: rgba(12, 14, 22, 0.72);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 0 0 1px rgba(0, 229, 255, 0.08) inset,
+    0 32px 80px rgba(0, 0, 0, 0.65),
+    0 0 60px rgba(0, 229, 255, 0.05);
+  overflow: hidden;
+}
+
+/* Animated top-edge glow bar */
+.modal-glass::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 229, 255, 0.6) 30%,
+    rgba(139, 92, 246, 0.6) 70%,
+    transparent 100%
+  );
+  animation: glowBar 4s ease-in-out infinite alternate;
+}
+
+@keyframes glowBar {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+
 @keyframes modalIn {
   from { opacity: 0; transform: scale(0.93) translateY(16px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -1177,6 +1224,96 @@ body {
   background: rgba(255, 92, 92, 0.08);
   border: 1px solid rgba(255, 92, 92, 0.15);
   border-radius: var(--radius-sm);
+}
+
+.success-message {
+  color: #00e5a0;
+  background: rgba(0, 229, 160, 0.08);
+  border-color: rgba(0, 229, 160, 0.18);
+}
+
+/* ── Modal logo mark (glass modal header) ── */
+.modal-logo-mark {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  opacity: 0.65;
+}
+.modal-logo-mark .mlm-white { color: var(--text-p); }
+.modal-logo-mark .mlm-cyan  { color: var(--cyan); }
+
+/* ── Role selector tabs ── */
+.role-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 22px;
+}
+
+.role-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-t);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  letter-spacing: 0.2px;
+}
+
+.role-tab:hover {
+  color: var(--text-s);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.role-tab--active {
+  background: rgba(0, 229, 255, 0.12);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.1);
+}
+
+/* ── Agency ID field ── */
+.agency-id-field {
+  margin-bottom: 0;
+  animation: slideDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.agency-id-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+
+.agency-id-input {
+  border-color: rgba(0, 229, 255, 0.15) !important;
+  background: rgba(0, 229, 255, 0.03) !important;
+}
+
+.agency-id-input:focus {
+  border-color: rgba(0, 229, 255, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.1) !important;
 }
 
 /* Submit button */
@@ -1503,4 +1640,199 @@ body {
   .pricing-card:hover,
   .cta-primary:hover,
   .cta-secondary:hover { transform: none; }
+}
+/* ════════════════════ FEATURES SHOWCASE ════════════════════ */
+.showcase-section {
+  padding: 100px 24px;
+  background: rgba(0,0,0,0.2);
+}
+
+.showcase-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.showcase-header {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.showcase-header h2 {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+  margin: 12px 0 16px;
+}
+
+.showcase-sub {
+  font-size: 15px;
+  color: rgba(255,255,255,0.45);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.showcase-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 28px 24px;
+  transition: border-color 0.25s, background 0.25s, transform 0.25s;
+}
+
+.showcase-card:hover {
+  border-color: rgba(0,229,255,0.2);
+  background: rgba(0,229,255,0.04);
+  transform: translateY(-3px);
+}
+
+.showcase-icon {
+  font-size: 26px;
+  margin-bottom: 14px;
+  line-height: 1;
+}
+
+.showcase-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #eeeef5;
+  margin-bottom: 8px;
+}
+
+.showcase-card-desc {
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.65;
+}
+
+@media (max-width: 820px) {
+  .showcase-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .showcase-section { padding: 64px 20px; }
+}
+
+@media (max-width: 540px) {
+  .showcase-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ════════════════════ FINAL CTA ════════════════════ */
+.final-cta-section {
+  padding: 100px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.final-cta-section::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.final-cta-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.final-cta-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0,229,255,0.8);
+  background: rgba(0,229,255,0.08);
+  border: 1px solid rgba(0,229,255,0.2);
+  border-radius: 20px;
+  padding: 5px 14px;
+  margin-bottom: 24px;
+  letter-spacing: 0.3px;
+}
+
+.final-cta-headline {
+  font-size: clamp(28px, 4.5vw, 46px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+
+.final-cta-sub {
+  font-size: 15px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.65;
+  margin-bottom: 36px;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.final-cta-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 540px) {
+  .final-cta-section { padding: 72px 20px; }
+  .final-cta-btns { flex-direction: column; width: 100%; }
+  .final-cta-btns .cta-primary,
+  .final-cta-btns .cta-secondary { width: 100%; justify-content: center; }
+}
+.modal-client-hint {
+  font-size: 12px;
+  color: rgba(0, 229, 255, 0.7);
+  background: rgba(0, 229, 255, 0.06);
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+/* ─────────────────────────────────────────────────────
+   ADDITIONAL TYPOGRAPHY & UI COMPONENTS
+   ───────────────────────────────────────────────────── */
+
+/* Typewriter cursor – blinking cyan line */
+.typewriter-cursor {
+  display: inline-block;
+  width: 3px;
+  height: 0.85em;
+  background: var(--cyan);
+  margin-left: 4px;
+  vertical-align: middle;
+  border-radius: 2px;
+  animation: blink 1s step-end infinite;
+}
+
+/* Hero subtext – descriptive paragraph under headline */
+.hero-subtext {
+  font-size: clamp(16px, 2.4vw, 20px);
+  color: var(--text-s);
+  line-height: 1.72;
+  max-width: 540px;
+  margin: 0 auto var(--sp-5);
+  font-weight: 400;
+  animation: heroFadeUp 1s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both;
 }
