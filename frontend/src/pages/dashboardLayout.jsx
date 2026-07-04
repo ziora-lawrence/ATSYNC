@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import './dashboard.css';
 import { initialClients, initialNotifications, initialChatMessages } from './dashboardData';
+import { supabase } from '../lib/supabase';
 import TopBar from './TopBar';
 import Sidebar from './Sidebar';
 
@@ -10,8 +11,17 @@ const DashboardLayout = () => {
   const location = useLocation();
 
   // ─── Core data states ───────────────────────────────────────────────────────
+  // "clients" = demo/mock roster (dashboardData.js) — used by the overview page,
+  // search overlay, sidebar, and the "Add Client" manual-entry flow.
   const [clients, setClients] = useState([]);
-  const [activeClientId, setActiveClientId] = useState('madestone-fa');
+  // "realClients" = actual approved clients pulled from Supabase (agency_clients).
+  // Fetched ONCE here, at the top of the tree, instead of separately inside
+  // clients.jsx — that duplication is what caused activeClient to sometimes
+  // resolve to a real client and sometimes silently fall back to mock data
+  // depending on which screen you navigated in from.
+  const [realClients, setRealClients] = useState([]);
+  const [realClientsLoading, setRealClientsLoading] = useState(true);
+  const [activeClientId, setActiveClientId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // ─── Panel / UI states ──────────────────────────────────────────────────────
@@ -39,7 +49,7 @@ const DashboardLayout = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ─── Simulated API load ──────────────────────────────────────────────────────
+  // ─── Simulated demo-data load (mock roster only) ─────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -61,8 +71,93 @@ const DashboardLayout = () => {
     };
   }, []);
 
+  // ─── Real client load (Supabase) ─────────────────────────────────────────────
+  // This is the single place real clients get fetched. clients.jsx reads
+  // realClients from context instead of fetching its own copy, so there's
+  // exactly one source of truth for "which real clients exist."
+  useEffect(() => {
+    const fetchRealClients = async () => {
+      const user = JSON.parse(localStorage.getItem('atsync_user') || '{}');
+      const agencyId = user.agencyId;
+
+      if (!agencyId) {
+        setRealClientsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('agency_clients')
+        .select(`
+          id,
+          client_id,
+          business_name,
+          created_at,
+          intake_submissions ( budget ),
+          projects ( id, name, phase, progress, revisions_used, revisions_total, status )
+        `)
+        .eq('agency_id', agencyId)
+        .eq('status', 'active');
+
+      if (error) {
+        console.error('Error fetching real clients:', error);
+        setRealClientsLoading(false);
+        return;
+      }
+
+      const shaped = (data || []).map((row) => {
+        const project = Array.isArray(row.projects) ? row.projects[0] : row.projects;
+        return {
+          id: row.id, // agency_clients.id
+          client_id: row.client_id,
+          name: row.business_name || 'Client',
+          type: 'active',
+          statusDot: 'green',
+          service: project?.name || 'New Project',
+          budget: row.intake_submissions?.budget || '—',
+          deadline: '—',
+          progress: project?.progress || 0,
+          alertBadge: null,
+          timeline: project ? [{ id: 1, title: project.phase, active: true, status: 'Active', progress: project.progress, date: '—' }] : [],
+          tasks: [],
+          chatLog: [],
+          scopeCreepLog: [],
+          source: 'supabase',
+          project: project || null,
+          createdAt: row.created_at,
+        };
+      });
+
+      setRealClients(shaped);
+      setRealClientsLoading(false);
+    };
+
+    fetchRealClients();
+  }, []);
+
   // ─── Derived values ──────────────────────────────────────────────────────────
-  const activeClient = clients.find(c => c.id === activeClientId) || clients[0] || {};
+  // activeClient always resolves against BOTH real and mock clients, no matter
+  // which screen set activeClientId. This is what used to break: activeClient
+  // was only ever looked up against the mock "clients" array, so a real
+  // client's UUID never matched and it silently fell back to the first mock
+  // client (Madestone FA) — which is why chat looked like it was replying
+  // with dummy/canned messages instead of the real client's conversation.
+  const allClients = [...realClients, ...clients];
+  const activeClient = allClients.find(c => c.id === activeClientId) || {};
+
+  // Auto-select a sensible default once data has loaded, instead of leaving
+  // activeClientId pointing at nothing (or at a stale/dummy id) until the
+  // user happens to click the right roster row.
+  useEffect(() => {
+    if (loading || realClientsLoading) return;
+    if (activeClientId && allClients.some(c => c.id === activeClientId)) return;
+
+    const firstReal = realClients[0];
+    const firstMock = clients[0];
+    const fallback = firstReal || firstMock;
+    if (fallback) setActiveClientId(fallback.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, realClientsLoading, realClients, clients]);
+
   const activeClientsCount  = clients.filter(c => c.type === 'active').length;
   const pendingIntakeCount  = clients.filter(c => c.type === 'pending').length;
   const openApprovalsCount  = clients.filter(c => c.alertBadge === 'ready').length;
@@ -264,6 +359,7 @@ const DashboardLayout = () => {
         <div className="view active" style={{ padding: 0 }}>
           <Outlet context={{
             clients, setClients,
+            realClients, realClientsLoading,
             activeClientId, setActiveClientId,
             loading, triggerToast,
             notificationsList, setNotificationsList,
