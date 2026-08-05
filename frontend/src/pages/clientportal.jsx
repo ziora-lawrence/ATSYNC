@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/api';
 import './clientportal.css';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://atsync-backend.onrender.com';

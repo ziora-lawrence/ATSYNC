@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, useLocation } from 'react-router-dom';
+import { supabase } from '../lib/api';
+
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://atsync-backend-vdko.onrender.com';
 
 export const Settings = () => {
   const { triggerToast, clients = [] } = useOutletContext();
@@ -29,20 +32,104 @@ export const Settings = () => {
   const pendingClientsCount = clients.filter(c => c.type === 'pending').length;
   const totalClientsUsed = activeClientsCount + pendingClientsCount;
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText('atsync-team-x9k2-zw4r');
-    setCopyStatus('Copied ✓');
-    triggerToast('Team invite code copied to clipboard!');
-    setTimeout(() => setCopyStatus('Copy'), 2000);
-  };
 
   const agencyUser = (() => {
     try {
-      return JSON.parse(localStorage.getItem('atsync_user')) || { agencyName: 'Daniel Z.', email: 'atlassync1@gmail.com' };
+      return JSON.parse(localStorage.getItem('atsync_user')) || { agencyName: 'Daniel Z.', email: 'atlassync1@gmail.com', agencyId: '' };
     } catch {
-      return { agencyName: 'Daniel Z.', email: 'atlassync1@gmail.com' };
+      return { agencyName: 'Daniel Z.', email: 'atlassync1@gmail.com', agencyId: '' };
     }
   })();
+
+  // ── Team state ────────────────────────────────────────────────
+  const agencyId = agencyUser.agencyId || '';
+  const [staffList, setStaffList] = useState([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('editor');
+  const [inviting, setInviting] = useState(false);
+  const [removeLoadingId, setRemoveLoadingId] = useState(null);
+
+  const fetchStaff = async () => {
+    if (!agencyId) return;
+    setStaffLoading(true);
+    try {
+      const res = await fetch(`${BACKEND}/api/auth/staff/${agencyId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStaffList(data);
+      }
+    } catch (e) {
+      console.error('Fetch staff error:', e);
+    } finally {
+      setStaffLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'team') fetchStaff();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  const handleInviteStaff = async () => {
+    if (!inviteEmail.trim()) { triggerToast('Enter an email address first.'); return; }
+    if (!agencyId) { triggerToast('Agency ID not found. Please log out and back in.'); return; }
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${BACKEND}/api/auth/invite-staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ agencyId, email: inviteEmail.trim(), role: inviteRole }),
+      });
+      const body = await res.json();
+      if (res.ok) {
+        triggerToast('Invite sent! They\'ll receive an email shortly.');
+        setInviteEmail('');
+        fetchStaff();
+      } else {
+        triggerToast(body.message || 'Failed to send invite.');
+      }
+    } catch (e) {
+      triggerToast('Network error — could not send invite.');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleRemoveStaff = async (staffId) => {
+    if (!agencyId) return;
+    setRemoveLoadingId(staffId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${BACKEND}/api/auth/staff/${agencyId}/${staffId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+      });
+      if (res.ok) {
+        triggerToast('Team member removed.');
+        setStaffList(prev => prev.filter(s => s.id !== staffId));
+      } else {
+        const body = await res.json();
+        triggerToast(body.message || 'Failed to remove member.');
+      }
+    } catch (e) {
+      triggerToast('Network error.');
+    } finally {
+      setRemoveLoadingId(null);
+    }
+  };
+
+  const handleCopyAgencyId = () => {
+    if (!agencyId) { triggerToast('No Agency ID found.'); return; }
+    navigator.clipboard.writeText(agencyId);
+    setCopyStatus('Copied ✓');
+    triggerToast('Agency ID copied — share this with your team members to log in.');
+    setTimeout(() => setCopyStatus('Copy'), 2000);
+  };
+
+  const getInitials = (name = '') =>
+    name.split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || '??';
 
   const navItems = [
     { id: 'general', icon: 'ti-settings-2', label: 'General' },
@@ -294,12 +381,44 @@ export const Settings = () => {
 
           {/* ── TEAM ── */}
           <div className={`spane ${activeTab === 'team' ? 'active' : ''}`}>
+            {/* ── Agency ID (share this to log in as staff) ── */}
+            <div className="section-card">
+              <div className="section-card-title">Your Agency ID</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-sec)', marginBottom: '14px', lineHeight: 1.6 }}>
+                Team members need this ID when they log in with the <strong>Team Member</strong> tab on the landing page.
+              </div>
+              <div style={{
+                display: 'flex', gap: '8px',
+                background: 'var(--bg-sub)', border: '1px solid var(--border)',
+                padding: '10px 14px', borderRadius: '8px',
+                alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px'
+              }}>
+                <span style={{ fontSize: '12px', color: 'var(--ac-mid)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                  {agencyId || '— not available, please log out and back in —'}
+                </span>
+                <button
+                  onClick={handleCopyAgencyId}
+                  style={{
+                    background: 'transparent', border: 'none',
+                    color: copyStatus === 'Copied ✓' ? 'var(--green)' : 'var(--ac-mid)',
+                    cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', fontFamily: 'inherit',
+                    flexShrink: 0, marginLeft: '8px'
+                  }}
+                >
+                  {copyStatus}
+                </button>
+              </div>
+            </div>
+
+            {/* ── Live team member list ── */}
             <div className="section-card">
               <div className="section-card-title">Team members</div>
+
+              {/* Owner row (always first) */}
               <div className="setting-row">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
                   <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '11px' }}>
-                    {agencyUser.agencyName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    {getInitials(agencyUser.agencyName)}
                   </div>
                   <div className="sr-left">
                     <div className="sr-label">{agencyUser.agencyName}</div>
@@ -308,55 +427,81 @@ export const Settings = () => {
                 </div>
                 <span className="sent-badge sent-good">Owner</span>
               </div>
-              <div className="setting-row">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                  <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '11px', background: 'var(--green)' }}>
-                    CF
+
+              {/* Staff rows from DB */}
+              {staffLoading ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-sec)', padding: '12px 0' }}>Loading team…</div>
+              ) : staffList.length === 0 ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-sec)', padding: '12px 0' }}>No team members yet — invite someone below.</div>
+              ) : staffList.map(member => (
+                <div key={member.id} className="setting-row">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                    <div className="avatar" style={{
+                      width: '32px', height: '32px', fontSize: '11px',
+                      background: member.status === 'active' ? 'var(--green)' : 'var(--amber)'
+                    }}>
+                      {getInitials(member.email.split('@')[0])}
+                    </div>
+                    <div className="sr-left">
+                      <div className="sr-label">{member.email}</div>
+                      <div className="sr-sub">
+                        {member.status === 'active'
+                          ? `Joined ${member.joined_at ? new Date(member.joined_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}`
+                          : `Invited ${new Date(member.invited_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                        }
+                      </div>
+                    </div>
                   </div>
-                  <div className="sr-left">
-                    <div className="sr-label">Co-founder 1</div>
-                    <div className="sr-sub">Joined June 2026</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className={`sent-badge ${member.status === 'active' ? 'sent-good' : 'sent-ok'}`}>
+                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                    </span>
+                    <span className={`sent-badge ${member.status === 'active' ? 'sent-good' : 'sent-pending'}`} style={{ fontSize: '10px' }}>
+                      {member.status === 'active' ? 'Active' : 'Invited'}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveStaff(member.id)}
+                      disabled={removeLoadingId === member.id}
+                      style={{
+                        background: 'transparent', border: '1px solid rgba(226,75,74,0.3)',
+                        color: 'var(--red)', borderRadius: '5px',
+                        padding: '3px 8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit'
+                      }}
+                    >
+                      {removeLoadingId === member.id ? '…' : 'Remove'}
+                    </button>
                   </div>
                 </div>
-                <span className="sent-badge sent-ok">Editor</span>
-              </div>
+              ))}
             </div>
+
+            {/* ── Invite form ── */}
             <div className="section-card">
               <div className="section-card-title">Invite a teammate</div>
               <div style={{ fontSize: '13px', color: 'var(--text-sec)', marginBottom: '14px', lineHeight: 1.6 }}>
-                Share your invite code or send a direct email invite. New members join as Editors by default.
+                They'll receive an email to set their password and access the team workspace.
               </div>
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                background: 'var(--bg-sub)',
-                border: '1px solid var(--border)',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '12px'
-              }}>
-                <span style={{ fontSize: '12.5px', color: 'var(--ac-mid)' }}>Invite code: atsync-team-x9k2-zw4r</span>
-                <button
-                  onClick={handleCopyCode}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: copyStatus === 'Copied ✓' ? 'var(--green)' : 'var(--ac-mid)',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    fontFamily: 'inherit'
-                  }}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                <input
+                  type="email"
+                  className="form-input"
+                  placeholder="teammate@email.com"
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  style={{ flex: 1 }}
+                  onKeyDown={e => e.key === 'Enter' && handleInviteStaff()}
+                />
+                <select
+                  value={inviteRole}
+                  onChange={e => setInviteRole(e.target.value)}
+                  className="form-select"
+                  style={{ width: 'auto', minWidth: '110px' }}
                 >
-                  {copyStatus}
-                </button>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input type="email" className="form-input" placeholder="teammate@email.com" style={{ flex: 1 }} />
-                <button className="btn-primary" onClick={() => triggerToast('Invite email sent!')}>
-                  <i className="ti ti-send"></i> Invite
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+                <button className="btn-primary" onClick={handleInviteStaff} disabled={inviting}>
+                  <i className="ti ti-send" />{' '}{inviting ? 'Sending…' : 'Invite'}
                 </button>
               </div>
             </div>

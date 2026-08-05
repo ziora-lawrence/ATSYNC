@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "./landingpage.css";
 import Nav from "../nav/nav";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/api";
 
 /* ─────────────────────────────────────────────────────
    BACKGROUND COMPONENTS
@@ -177,6 +177,12 @@ const Landingpage = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
 
+  // ── OTP State ──
+  const [showOtpScreen, setShowOtpScreen] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [verifyEmail, setVerifyEmail] = useState("");
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
+
   // ── Role-based login state ──
   const [loginRole, setLoginRole] = useState("agency");
   const [agencyId, setAgencyId] = useState("");
@@ -193,7 +199,32 @@ const Landingpage = () => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/dashboard");
+        try {
+          // Check if client first
+          const { data: clientData } = await supabase
+            .from("agency_clients")
+            .select("id")
+            .eq("client_id", session.user.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (clientData) {
+            navigate(`/client/${clientData.id}`);
+            return;
+          }
+
+          // Otherwise check if agency (has agent profile)
+          const { data: agentProfile } = await supabase
+            .from("agent_profiles")
+            .select("id")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+
+          navigate(agentProfile ? "/dashboard" : "/agent-onboard");
+        } catch (err) {
+          console.error("Session routing error:", err);
+          navigate("/dashboard");
+        }
       } else {
         setSessionChecked(true);
       }
@@ -202,9 +233,32 @@ const Landingpage = () => {
   }, [navigate]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
-        navigate("/dashboard");
+        try {
+          const { data: clientData } = await supabase
+            .from("agency_clients")
+            .select("id")
+            .eq("client_id", session.user.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (clientData) {
+            navigate(`/client/${clientData.id}`);
+            return;
+          }
+
+          const { data: agentProfile } = await supabase
+            .from("agent_profiles")
+            .select("id")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+
+          navigate(agentProfile ? "/dashboard" : "/agent-onboard");
+        } catch (err) {
+          console.error("Auth state routing error:", err);
+          navigate("/dashboard");
+        }
       }
     });
     return () => subscription.unsubscribe();
@@ -282,21 +336,27 @@ const Landingpage = () => {
       if (agencyPass.length < 6) { seterror("Password must be at least 6 characters"); setIsAuthLoading(false); return; }
 
       try {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: agencyEmail.trim(),
-          password: agencyPass.trim(),
-          options: { data: { agency_name: agencyName.trim() } },
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://atsync-backend.onrender.com';
+        const res = await fetch(`${backendUrl}/api/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agencyName: agencyName.trim(),
+            email: agencyEmail.trim(),
+            password: agencyPass.trim()
+          })
         });
 
-        if (signUpError) {
-          seterror(signUpError.message || "Registration failed");
+        const data = await res.json();
+        if (!res.ok) {
+          seterror(data.message || "Registration failed");
         } else {
-          setIsLogin(true);
-          setagencyPass("");
-          setagencyConPass("");
-          seterror("✅ Account created! Check your email to verify before logging in.");
+          setVerifyEmail(agencyEmail.trim());
+          setShowOtpScreen(true);
+          seterror("");
         }
-      } catch {
+      } catch (err) {
+        console.error("Registration error:", err);
         seterror("Network error. Please try again later.");
       }
 
@@ -335,7 +395,22 @@ const Landingpage = () => {
             navigate(profile ? "/dashboard" : "/agent-onboard");
 
           } else if (loginRole === "staff") {
-            navigate(`/workspace/${agencyId.trim()}`);
+            const trimmedAgencyId = agencyId.trim();
+            const { data: staffRow, error: staffErr } = await supabase
+              .from("staff")
+              .select("id")
+              .eq("agency_id", trimmedAgencyId)
+              .eq("email", data.user.email.toLowerCase())
+              .maybeSingle();
+
+            if (staffErr || !staffRow) {
+              await supabase.auth.signOut();
+              seterror("You are not registered as a team member of this agency.");
+              setIsAuthLoading(false);
+              return;
+            }
+
+            navigate(`/workspace/${trimmedAgencyId}`);
 
           } else if (loginRole === "client") {
             // Look up agency_clients to find their portal — no Agency ID needed
@@ -361,6 +436,79 @@ const Landingpage = () => {
     }
 
     setIsAuthLoading(false);
+  };
+
+  const handleCloseLogin = () => {
+    setShowLogin(false);
+    setIsForgotMode(false);
+    setForgotEmailSent(false);
+    setShowOtpScreen(false);
+    setOtpCode("");
+    setVerifyEmail("");
+    seterror("");
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode.trim()) {
+      seterror("Please enter the verification code");
+      return;
+    }
+    setIsOtpLoading(true);
+    seterror("");
+    try {
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email: verifyEmail,
+        token: otpCode.trim(),
+        type: "signup",
+      });
+
+      if (verifyError) {
+        seterror(verifyError.message || "Verification failed");
+      } else {
+        seterror("✅ Verification successful!");
+        setShowOtpScreen(false);
+        setShowLogin(false);
+        
+        // Find if they have completed onboarding
+        const { data: agentProfile } = await supabase
+          .from("agent_profiles")
+          .select("id")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+
+        navigate(agentProfile ? "/dashboard" : "/agent-onboard");
+      }
+    } catch (err) {
+      console.error("Verification error:", err);
+      seterror("Network error during verification. Please try again.");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    seterror("");
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://atsync-backend.onrender.com';
+      const res = await fetch(`${backendUrl}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agencyName: agencyName.trim(),
+          email: verifyEmail,
+          password: agencyPass.trim(),
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        seterror(resData.message || "Failed to resend code");
+      } else {
+        seterror("✅ A new verification code has been sent!");
+      }
+    } catch {
+      seterror("Network error resending code. Please try again.");
+    }
   };
 
   const handleForgotSubmit = async () => {
@@ -434,12 +582,47 @@ const Landingpage = () => {
       {showLogin && (
         <div
           className="modal-overlay"
-          onClick={() => { setShowLogin(false); setIsForgotMode(false); setForgotEmailSent(false); seterror(""); }}
+          onClick={handleCloseLogin}
         >
           <div className="modal-box modal-glass" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => { setShowLogin(false); setIsForgotMode(false); setForgotEmailSent(false); seterror(""); }}>✕</button>
+            <button className="modal-close" onClick={handleCloseLogin}>✕</button>
 
-            {isForgotMode ? (
+            {showOtpScreen ? (
+              <>
+                <div className="modal-logo-mark">
+                  <span className="mlm-white">ATS</span><span className="mlm-cyan">YNC</span>
+                </div>
+                <h2>Verify Your Email</h2>
+                <p className="modal-subtitle">
+                  We've sent a verification code to <strong style={{ color: "var(--cyan)" }}>{verifyEmail}</strong>. Please enter the code below to complete your registration.
+                </p>
+
+                <input
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  type="text"
+                  placeholder="Enter Verification Code"
+                  className="modal-input"
+                  maxLength={10}
+                  style={{ textAlign: "center", letterSpacing: "2px", fontSize: "18px", fontWeight: "700" }}
+                />
+
+                {error && (
+                  <p className={`error-message ${error.startsWith("✅") ? "success-message" : ""}`}>{error}</p>
+                )}
+
+                <button className="modal-submit" onClick={handleVerifyOtp} disabled={isOtpLoading}>
+                  {isOtpLoading ? "Verifying..." : "Verify Code"}
+                </button>
+
+                <p className="modal-toggle">
+                  Didn't receive a code?{" "}
+                  <span onClick={handleResendOtp} style={{ cursor: "pointer", textDecoration: "underline" }}>Resend Code</span>
+                  {" | "}
+                  <span onClick={() => { setShowOtpScreen(false); seterror(""); }} style={{ cursor: "pointer", textDecoration: "underline" }}>Back to Signup</span>
+                </p>
+              </>
+            ) : isForgotMode ? (
               forgotEmailSent ? (
                 <div className="waitlist-success">
                   <div className="success-icon">✉️</div>

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/api';
 
 export const Sidebar = ({
   clients: _clients = [],

@@ -16,7 +16,8 @@ import ClientPortal from './pages/clientportal.jsx';
 import ClientSettings from './pages/clientsettings';
 import ClientSignup from './pages/clientsignup';
 import IntakeStatus from './pages/intakestatus';
-import { supabase } from './lib/supabase';
+import Workspace from './pages/workspace';
+import { supabase } from './lib/api';
 
 
 const App = () => {
@@ -64,6 +65,7 @@ const App = () => {
       <Route path="/client/settings" element={<ClientSettings />} />
       <Route path="/client/signup" element={<ClientSignup />} />
       <Route path="/intake/status" element={<IntakeStatus />} />
+      <Route path="/workspace/:agencyId" element={<Workspace />} />
       
       {/* Nested Dashboard Center Routes */}
       <Route path="/dashboard" element={<DashboardLayout />}>

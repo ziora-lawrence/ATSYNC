@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/api';
 import './intakeportal.css';
 
 const SERVICE_OPTIONS = [

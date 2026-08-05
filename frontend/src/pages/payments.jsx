@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/api';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://atsync-backend.onrender.com';
 

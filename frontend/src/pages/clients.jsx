@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import RightPanel from './RightPanel';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/api';
 
 export const Clients = () => {
   const {
