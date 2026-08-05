@@ -214,11 +214,78 @@ create policy "Agency can create payments"
   );
 
 -- Webhook updates use the service-role key (bypasses RLS), so no UPDATE policy needed for end-users.
--- If you want to allow service-role only updates via RLS: use a permissive policy scoped to service_role.
+-- The previous "Service role can update payments" policy (USING true) was dropped because it allowed
+-- any authenticated user to modify payment rows. Service-role key bypasses RLS automatically.
+
+
+-- ============================================================
+-- 6. STAFF TABLE
+-- Links a user account to an agency as a team member.
+-- Status is flipped from 'invited' → 'active' server-side via
+-- the service-role key in POST /api/auth/activate-staff —
+-- no UPDATE policy is granted to end-users intentionally.
+-- ============================================================
+
+create table if not exists public.staff (
+  id         uuid primary key default gen_random_uuid(),
+  agency_id  uuid not null references auth.users(id) on delete cascade,
+  user_id    uuid references auth.users(id) on delete set null,
+  email      text not null,
+  role       text not null default 'editor' check (role in ('editor', 'viewer')),
+  status     text not null default 'invited' check (status in ('invited', 'active')),
+  invited_at timestamptz default now(),
+  joined_at  timestamptz,
+  unique (agency_id, email)
+);
+
+alter table public.staff enable row level security;
+
+-- Agency owner reads all staff in their agency
+drop policy if exists "Agency can read own staff" on public.staff;
+create policy "Agency can read own staff"
+  on public.staff for select
+  using (auth.uid() = agency_id);
+
+-- Staff member reads their own row
+drop policy if exists "Staff can read own row" on public.staff;
+create policy "Staff can read own row"
+  on public.staff for select
+  using (auth.uid() = user_id);
+
+-- Agency owner inserts (invites) staff
+drop policy if exists "Agency can insert staff" on public.staff;
+create policy "Agency can insert staff"
+  on public.staff for insert
+  with check (auth.uid() = agency_id);
+
+-- Agency owner removes staff
+drop policy if exists "Agency can delete staff" on public.staff;
+create policy "Agency can delete staff"
+  on public.staff for delete
+  using (auth.uid() = agency_id);
+
+-- NOTE: Status update (invited → active) is performed exclusively via the
+-- service-role key in POST /api/auth/activate-staff.
+-- No UPDATE policy is granted to staff members — this is intentional.
+
+-- ============================================================
+-- STEP 5 SECURITY PATCHES (applied 2026-07-05)
+-- ============================================================
+
+-- PATCH 1: Tighten intake_submissions backfill policy.
+-- The old policy used USING(true) WITH CHECK(true), allowing any authenticated
+-- user to overwrite any submission row. The new policy restricts updates to rows
+-- where client_id is still NULL, and only allows setting it to auth.uid().
+drop policy if exists "Allow clients to backfill their user id" on public.intake_submissions;
+create policy "Allow clients to backfill their user id"
+  on public.intake_submissions for update
+  using (client_id is null)
+  with check (client_id = auth.uid());
+
+-- PATCH 2: Drop the unsafe payments UPDATE policy.
+-- The old "Service role can update payments" policy used USING(true) which allowed
+-- any authenticated user to mark payments as paid. The service-role key (used by
+-- the Paystack webhook backend) bypasses RLS automatically, so no user-facing
+-- UPDATE policy is required at all.
 drop policy if exists "Service role can update payments" on public.payments;
-create policy "Service role can update payments"
-  on public.payments for update
-  using (true);
-
-
 
