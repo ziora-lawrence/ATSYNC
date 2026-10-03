@@ -1,16 +1,62 @@
-# React + Vite
+# ATSYNC
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Client management platform built for African digital agencies. Intake, approvals, payments, and client communication in one place instead of scattered across WhatsApp, email, and spreadsheets.
 
-Currently, two official plugins are available:
+Live demo: <atsync.app>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+![ATSYNC dashboard](./docs/dashboard.png)
 
-## React Compiler
+## What it does
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Agency dashboard** to manage clients, projects, and approvals
+- **Intake links** so new clients submit their details through a shareable form
+- **Approval flow** with Paystack payments, gated so work only proceeds once payment is verified
+- **Real-time chat** between agency and client via Supabase Realtime
+- **Client portal** (in progress)
 
-## Expanding the ESLint configuration
+## Tech stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Layer | Tools |
+|---|---|
+| Frontend | React, Vite, custom CSS |
+| Auth / DB / Realtime | Supabase (Postgres, RLS) |
+| Payments | Paystack |
+| Backend | Node.js / Express |
+| Hosting | Vercel |
+
+## Security
+
+- Row Level Security on client data in Supabase
+- Paystack webhooks verified with HMAC-SHA512, with duplicate-event protection
+- CSP and HSTS headers configured through `vercel.json`
+- Scanned and hardened using OWASP ZAP
+
+## Project structure
+
+ATSYNC/
+├── frontend/ # React + Vite app
+├── backend/ # Node/Express API
+└── supabase_setup.sql # database schema
+
+
+## Getting started
+
+1. Clone the repo
+2. Run `supabase_setup.sql` in your Supabase project's SQL editor
+3. Set up environment variables (see `.env.example`)
+4. Start the frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## Status
+
+Agency dashboard and auth are live. Client portal and full backend integration are in progress.
+
+## Team
+
+- **Daniel Iwuji** ([@ziora-lawrence](https://github.com/ziora-lawrence)): founder, frontend
+- **muhayad olamilekan** ([simisola16]): cofounder, backend
